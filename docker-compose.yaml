@@ -1,6 +1,49 @@
 version: "3"
 services:
-  web:
+  service:
+    build:
+      context: .
     ports:
       - "80:8080"
-    image: "gscho/simple-go-app:latest"
+    working_dir: &PROJECT_ROOT_DIR /app
+    # linux permissions / vscode support: we must explicitly run as the development user
+    user: development
+    volumes:
+      # mount working directory
+      # https://code.visualstudio.com/docs/remote/containers-advanced#_update-the-mount-consistency-to-delegated-for-macos
+      # https://docs.docker.com/docker-for-mac/osxfs-caching/#delegated
+      # the container’s view is authoritative (permit delays before updates on the container appear in the host)
+      - .:/app:delegated
+
+      # mount cached go pkg downloads
+      - go-pkg:/go/pkg
+
+      # speed up tmp dirs in working directory by using separate volumes (not the host's filesystem)
+      - workdir-api-tmp:/app/api/tmp
+      - workdir-bin:/app/bin
+      - workdir-tmp:/app/tmp
+
+      # mount cached vscode container extensions
+      # https://code.visualstudio.com/docs/remote/containers-advanced#_avoiding-extension-reinstalls-on-container-rebuild
+      - vscode-extensions:/home/development/.vscode-server/extensions
+      - vscode-extensions-insiders:/home/development/.vscode-server-insiders/extensions
+
+    depends_on:
+      - grobid
+  grobid:
+    image: lfoppiano/grobid:0.7.2
+    ports:
+      - "8070:8070"
+    volumes:
+      - ./grobid-home:/grobid-home
+    environment:
+      - GROBID_VERSION=0.6.1
+      - GROBID_HOME=/grobid-home
+      - JAVA_OPTS=-Xmx4G
+volumes:
+  go-pkg:
+  workdir-api-tmp:
+  workdir-bin:
+  workdir-tmp:
+  vscode-extensions:
+  vscode-extensions-insiders:
