@@ -9,6 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +22,34 @@ var (
 )
 
 func main() {
-	// Perform the initial health check on startup
+	// using os.Getenv() to get the environment variable
+	sqsURL := os.Getenv("SQS_URL")
+	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	awsSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	awsRegion := os.Getenv("AWS_REGION")
+
+	// Set up AWS session
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String(awsRegion),
+		Credentials: credentials.NewStaticCredentials(awsAccessKey, awsSecretKey, ""),
+	})
+	if err != nil {
+		log.Fatal("Error creating AWS session:", err)
+	}
+
+	// Set up the queue service
+	sqsSvc := sqs.New(sess)
+
+	// Create a channel for communication between dispatcher and workers
+	messageQueue := make(chan *sqs.Message, 10) // Adjust the buffer size as needed
+
+	// Start dispatcher
+	go dispatcher(sqsSvc, sqsURL, messageQueue)
+
+	// Start three workers
+	for i := 1; i <= 3; i++ {
+		go worker(i, messageQueue, sqsSvc, sqsURL)
+	}
 
 	// Start a timer for periodic health checks
 	go func() {
@@ -28,25 +59,6 @@ func main() {
 			checkGrobidHealth()
 		}
 	}()
-
-	//cfg := &config.AppConfig{}
-
-	//awsCfg := &aws.Config{
-	//	Region: aws.String("eu-west-2"),
-	//}
-
-	// queueReceiver, err := queue.NewReceiver(sess, queue.Config{
-	//queueReceiver, err := queue.NewReceiver(sess, queue.Config{
-	//	QueueName:            "grobid-queue",
-	//	PollingWaitTime:      20,
-	//	VisibilityTimeout:    60,
-	//	AckRetries:           3,
-	//	MaxMessagesToProcess: 10,
-	//})
-
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
 
 	r := gin.Default()
 
@@ -94,4 +106,48 @@ func checkGrobidHealth() {
 	}
 	fmt.Println("Setting Grobid health status to", isHealthy)
 	healthStatus = isHealthy
+}
+
+func dispatcher(svc *sqs.SQS, sqsURL string, messageQueue chan<- *sqs.Message) {
+	for {
+		// Receive message from SQS
+		result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
+			QueueUrl:            aws.String(sqsURL),
+			MaxNumberOfMessages: aws.Int64(1),
+			VisibilityTimeout:   aws.Int64(30), // Adjust the visibility timeout as needed
+			WaitTimeSeconds:     aws.Int64(20),
+		})
+		if err != nil {
+			log.Println("Error receiving message:", err)
+			continue
+		}
+
+		// Enqueue message for workers
+		for _, message := range result.Messages {
+			messageQueue <- message
+		}
+	}
+}
+
+func worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL string) {
+	for {
+		// Wait for a message
+		message := <-messageQueue
+
+		// Process the message (print its contents)
+		fmt.Printf("Worker %d received message: %s\n", id, *message.Body)
+
+		// Simulate processing time
+		time.Sleep(time.Minute)
+
+		// Put the message back to the queue
+		_, err := svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
+			QueueUrl:          aws.String(sqsURL),
+			ReceiptHandle:     message.ReceiptHandle,
+			VisibilityTimeout: aws.Int64(0),
+		})
+		if err != nil {
+			log.Println("Error putting message back to the queue:", err)
+		}
+	}
 }
