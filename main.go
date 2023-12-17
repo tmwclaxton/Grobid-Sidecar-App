@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"io"
 	"log"
 	"net/http"
@@ -10,10 +11,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -22,11 +23,31 @@ var (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		// not fatal just continue
+		log.Println("Couldn't loading .env file:", err)
+	}
+
 	// using os.Getenv() to get the environment variable
-	sqsURL := os.Getenv("SQS_URL")
-	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	sqsPrefix := os.Getenv("SQS_PREFIX")
+	requestsQueueName := os.Getenv("REQUESTS_QUEUE")
+	sqsURL := fmt.Sprintf("%s/%s", sqsPrefix, requestsQueueName)
 	awsSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 	awsRegion := os.Getenv("AWS_REGION")
+	if sqsURL == "" {
+		log.Fatal("SQS URL not set")
+	}
+	if awsAccessKey == "" {
+		log.Fatal("AWS access key not set")
+	}
+	if awsSecretKey == "" {
+		log.Fatal("AWS secret key not set")
+	}
+	if awsRegion == "" {
+		log.Fatal("AWS region not set")
+	}
 
 	// Set up AWS session
 	sess, err := session.NewSession(&aws.Config{
@@ -109,11 +130,12 @@ func checkGrobidHealth() {
 }
 
 func dispatcher(svc *sqs.SQS, sqsURL string, messageQueue chan<- *sqs.Message) {
+	log.Println("Starting dispatcher...")
 	for {
 		// Receive message from SQS
 		result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(sqsURL),
-			MaxNumberOfMessages: aws.Int64(1),
+			MaxNumberOfMessages: aws.Int64(20),
 			VisibilityTimeout:   aws.Int64(30), // Adjust the visibility timeout as needed
 			WaitTimeSeconds:     aws.Int64(20),
 		})
@@ -144,7 +166,7 @@ func worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL strin
 		_, err := svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
 			QueueUrl:          aws.String(sqsURL),
 			ReceiptHandle:     message.ReceiptHandle,
-			VisibilityTimeout: aws.Int64(0),
+			VisibilityTimeout: aws.Int64(30),
 		})
 		if err != nil {
 			log.Println("Error putting message back to the queue:", err)
