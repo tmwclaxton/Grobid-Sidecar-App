@@ -1,6 +1,6 @@
 version: "3"
 services:
-  service:
+  go-helper:
     build:
       context: .
     ports:
