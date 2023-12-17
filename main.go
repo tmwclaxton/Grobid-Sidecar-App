@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -22,33 +23,36 @@ var (
 	healthMutex  sync.Mutex
 )
 
-func main() {
+func loadEnv() {
 	err := godotenv.Load()
 	if err != nil {
-		// not fatal just continue
-		log.Println("Couldn't loading .env file:", err)
+		// Not fatal, just log the error and continue
+		log.Println("Couldn't load .env file:", err)
 	}
+}
 
-	// using os.Getenv() to get the environment variable
-	sqsPrefix := os.Getenv("SQS_PREFIX")
-	requestsQueueName := os.Getenv("REQUESTS_QUEUE")
+func getEnvVariable(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("%s not set", key)
+	}
+	return value
+}
+
+func main() {
+	// Load environment variables
+	loadEnv()
+
+	// Get environment variables
+	sqsPrefix := getEnvVariable("SQS_PREFIX")
+	requestsQueueName := getEnvVariable("REQUESTS_QUEUE")
 	sqsURL := fmt.Sprintf("%s/%s", sqsPrefix, requestsQueueName)
-	awsSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	awsRegion := os.Getenv("AWS_REGION")
+	awsSecretKey := getEnvVariable("AWS_SECRET_ACCESS_KEY")
+	awsAccessKey := getEnvVariable("AWS_ACCESS_KEY_ID")
+	awsRegion := getEnvVariable("AWS_REGION")
+	awsBucket := getEnvVariable("AWS_BUCKET")
 
-	if sqsURL == "" {
-		log.Fatal("SQS URL not set")
-	}
-	if awsAccessKey == "" {
-		log.Fatal("AWS access key not set")
-	}
-	if awsSecretKey == "" {
-		log.Fatal("AWS secret key not set")
-	}
-	if awsRegion == "" {
-		log.Fatal("AWS region not set")
-	}
+	log.Println("Environment variables loaded successfully.")
 
 	// Set up AWS session
 	sess, err := session.NewSession(&aws.Config{
@@ -70,7 +74,7 @@ func main() {
 
 	// Start three workers
 	for i := 1; i <= 5; i++ {
-		go worker(i, messageQueue, sqsSvc, sqsURL)
+		go worker(i, messageQueue, sqsSvc, sqsURL, awsBucket)
 	}
 
 	// Start a timer for periodic health checks
@@ -136,7 +140,7 @@ func dispatcher(svc *sqs.SQS, sqsURL string, messageQueue chan<- *sqs.Message) {
 		// Receive message from SQS
 		result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(sqsURL),
-			MaxNumberOfMessages: aws.Int64(20),
+			MaxNumberOfMessages: aws.Int64(10),
 			VisibilityTimeout:   aws.Int64(30), // Adjust the visibility timeout as needed
 			WaitTimeSeconds:     aws.Int64(20),
 		})
@@ -152,16 +156,28 @@ func dispatcher(svc *sqs.SQS, sqsURL string, messageQueue chan<- *sqs.Message) {
 	}
 }
 
-func worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL string) {
+func worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL string, s3Bucket string) {
+	log.Printf("Starting worker %d...\n", id)
 	for {
 		// Wait for a message
 		message := <-messageQueue
 
-		// Process the message (print its contents)
-		fmt.Printf("Worker %d received message: %s\n", id, *message.Body)
+		// parse message
+		// Parse the JSON message
+		var msgData map[string]interface{}
+		if err := json.Unmarshal([]byte(*message.Body), &msgData); err != nil {
+			log.Println("Error decoding JSON message:", err)
+			continue
+		}
+
+		path := msgData["s3Location"].(string)
+		operation := msgData["operation"].(string)
+
+		//Print the path or use it as needed
+		fmt.Printf("Worker %d received message. Path: %s. Operation: %s\n", id, path, operation)
 
 		// Simulate processing time
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute) // remove this later <--------------------------
 
 		// Put the message back to the queue
 		_, err := svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{

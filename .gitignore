@@ -1533,3 +1533,8 @@
 /vendor/github.com/aws/aws-sdk-go/aws/request/waiter.go
 /vendor/github.com/aws/aws-sdk-go/aws/credentials/stscreds/web_identity_provider.go
 /vendor/github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil/xml_to_struct.go
+/vendor/github.com/joho/godotenv/.gitignore
+/vendor/github.com/joho/godotenv/godotenv.go
+/vendor/github.com/joho/godotenv/LICENCE
+/vendor/github.com/joho/godotenv/parser.go
+/vendor/github.com/joho/godotenv/README.md
