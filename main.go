@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -27,6 +28,25 @@ func main() {
 			checkGrobidHealth()
 		}
 	}()
+
+	//cfg := &config.AppConfig{}
+
+	//awsCfg := &aws.Config{
+	//	Region: aws.String("eu-west-2"),
+	//}
+
+	// queueReceiver, err := queue.NewReceiver(sess, queue.Config{
+	//queueReceiver, err := queue.NewReceiver(sess, queue.Config{
+	//	QueueName:            "grobid-queue",
+	//	PollingWaitTime:      20,
+	//	VisibilityTimeout:    60,
+	//	AckRetries:           3,
+	//	MaxMessagesToProcess: 10,
+	//})
+
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	r := gin.Default()
 
