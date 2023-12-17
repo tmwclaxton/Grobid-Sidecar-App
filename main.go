@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"io"
 	"log"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gin-gonic/gin"
@@ -36,6 +36,7 @@ func main() {
 	awsSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 	awsRegion := os.Getenv("AWS_REGION")
+
 	if sqsURL == "" {
 		log.Fatal("SQS URL not set")
 	}
@@ -68,7 +69,7 @@ func main() {
 	go dispatcher(sqsSvc, sqsURL, messageQueue)
 
 	// Start three workers
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 5; i++ {
 		go worker(i, messageQueue, sqsSvc, sqsURL)
 	}
 
