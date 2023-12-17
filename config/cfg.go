@@ -3,9 +3,14 @@ package config
 import "time"
 
 type AppConfig struct {
-	Dispatcher DispatcherConfig `json:"dispatcher"`
-	Queue      QueueConfig      `json:"queue"`
-	Worker     WorkerConfig     `json:"worker"`
+	Dispatcher                   DispatcherConfig `json:"dispatcher"`
+	Queue                        QueueConfig      `json:"queue"`
+	Worker                       WorkerConfig     `json:"worker"`
+	MaxRequestsPerGrobidInstance int              `json:"max_requests_per_grobid_instance"`
+	MinimumGapBetweenRequests    time.Duration    `json:"minimum_gap_between_requests"`
+	RequestsQueue                string           `json:"requests_queue"`
+	ResultsQueue                 string           `json:"results_queue"`
+	S3Bucket                     string           `json:"s3_bucket"`
 }
 
 type DispatcherConfig struct {
