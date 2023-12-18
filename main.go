@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -58,8 +59,9 @@ func main() {
 	go dispatcher.Dispatcher(sqsSvc, sqsURL, messageQueue)
 
 	workFunc := func() {
+		numWorkers, _ := strconv.Atoi(envHelper.GetEnvVariable("WORKER_COUNT"))
 		// Start three workers
-		for i := 1; i <= 5; i++ {
+		for i := 1; i <= numWorkers; i++ {
 			go dispatcher.Worker(i, messageQueue, sqsSvc, sqsURL, awsBucket)
 		}
 	}
