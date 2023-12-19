@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"simple-go-app/internal/store"
 	"strconv"
 	"sync"
 	"time"
@@ -53,9 +54,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Error opening database:", err)
 	}
-
+	s := store.New(db)
 	// ping database
-	err = db.Ping()
+	err = s.GetDB().Ping()
 	if err != nil {
 		log.Fatal("Error pinging database:", err)
 	} else {
@@ -84,7 +85,7 @@ func main() {
 		numWorkers, _ := strconv.Atoi(envHelper.GetEnvVariable("WORKER_COUNT"))
 		// Start three workers
 		for i := 1; i <= numWorkers; i++ {
-			go dispatcher.Worker(i, messageQueue, sqsSvc, sqsURL, awsBucket)
+			go dispatcher.Worker(i, messageQueue, sqsSvc, sqsURL, awsBucket, s)
 		}
 	}
 

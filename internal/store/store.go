@@ -13,3 +13,8 @@ type Store struct {
 func New(db *sql.DB) *Store {
 	return &Store{db: db}
 }
+
+// GetDB returns the underlying sql.DB instance
+func (s *Store) GetDB() *sql.DB {
+	return s.db
+}

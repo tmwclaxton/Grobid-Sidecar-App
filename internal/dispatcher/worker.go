@@ -8,6 +8,7 @@ import (
 	"log"
 	"simple-go-app/internal/envHelper"
 	"simple-go-app/internal/grobid"
+	"simple-go-app/internal/store"
 	"sync"
 	"time"
 
@@ -22,7 +23,7 @@ var (
 	lastRequestTimeMu sync.Mutex
 )
 
-func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string) {
+func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string, s *store.Store) {
 	awsRegion := envHelper.GetEnvVariable("AWS_REGION")
 	minGapBetweenRequests := envHelper.GetEnvVariable("MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS")
 	minGap, err := time.ParseDuration(minGapBetweenRequests + "s")
@@ -67,7 +68,7 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 	return fileContent, nil
 }
 
-func sendFileToGrobid(fileContent []byte) ([]byte, error) {
+func sendFileToGrobid(fileContent []byte) (*grobid.GrobidResponse, error) {
 	response, err := grobid.SendPDF2Grobid(fileContent)
 	if err != nil {
 		return nil, err
@@ -107,12 +108,17 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		return
 	}
 
-	response, err := sendFileToGrobid(fileContent)
-	fmt.Println(string(response[0:100]))
-
+	_, err = sendFileToGrobid(fileContent)
 	if err != nil {
 		log.Println("Error sending file to Grobid service:", err)
+		return
 	}
+
+	// Print a portion of the Grobid service response
+	//fmt.Println(string(response[0:100]))
+
+	// Convert the well-formed XML response to an XML file
+	// cast the response to an xml object
 
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()

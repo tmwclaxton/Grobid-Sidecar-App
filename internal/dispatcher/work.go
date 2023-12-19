@@ -10,3 +10,8 @@ type Work struct {
 func (w *Work) IsValid() bool {
 	return w.Path != "" && w.Operation != ""
 }
+
+// NewWork creates a new Work instance
+func NewWork(path, operation string) *Work {
+	return &Work{Path: path, Operation: operation}
+}
