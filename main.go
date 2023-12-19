@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"net/http"
 	"os"
@@ -37,8 +39,28 @@ func main() {
 	awsAccessKey := envHelper.GetEnvVariable("AWS_ACCESS_KEY_ID")
 	awsRegion := envHelper.GetEnvVariable("AWS_REGION")
 	awsBucket := envHelper.GetEnvVariable("AWS_BUCKET")
-
+	//dbConnectionString := envHelper.GetEnvVariable("DB_CONNECTION_STRING")
+	dbHost := envHelper.GetEnvVariable("DB_HOST")
+	dbPort := envHelper.GetEnvVariable("DB_PORT")
+	dbUser := envHelper.GetEnvVariable("DB_USERNAME")
+	dbPassword := envHelper.GetEnvVariable("DB_PASSWORD")
+	dbName := envHelper.GetEnvVariable("DB_DATABASE")
 	log.Println("Environment variables loaded successfully.")
+
+	// Set up mysql connection
+	log.Printf("Database connection string: %s\n", dbUser+":"+dbPassword+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
+	db, err := sql.Open("mysql", dbUser+":"+dbPassword+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
+	if err != nil {
+		log.Fatal("Error opening database:", err)
+	}
+
+	// ping database
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Error pinging database:", err)
+	} else {
+		log.Println("Database pinged successfully.")
+	}
 
 	// Set up AWS session
 	sess, err := session.NewSession(&aws.Config{

@@ -33,7 +33,7 @@ services:
     depends_on:
       - grobid
   grobid:
-    container_name: grobid
+    container_name: grobid-service
     image: lfoppiano/grobid:0.7.2
     ports:
       - "8070:8070"
