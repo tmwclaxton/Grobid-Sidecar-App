@@ -1608,3 +1608,5 @@
 /vendor/github.com/go-sql-driver/mysql/statement.go
 /vendor/github.com/go-sql-driver/mysql/transaction.go
 /vendor/github.com/go-sql-driver/mysql/utils.go
+/.idea/dataSources.xml
+/.idea/sqldialects.xml
