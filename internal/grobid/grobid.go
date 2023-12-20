@@ -9,29 +9,30 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"regexp"
 	"simple-go-app/internal/envHelper"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
 
 // DOIRegex is the regular expression for extracting DOIs
-var DOIRegex = regexp.MustCompile(`\b(10[.][0-9]{3,}(?:[.][0-9]+)*/(?:(?!["&\'])\S)+)\b`)
+//var DOIRegex = regexp.MustCompile(`\b(10[.][0-9]{3,}(?:[.][0-9]+)*/(?:(?!["&\'])\S)+)\b`)
 
-// GrobidResponse represents the structure of the Grobid service response.
-type GrobidResponse struct {
+// CrudeGrobidResponse represents the structure of the Grobid service response.
+type CrudeGrobidResponse struct {
+	Doi      string   `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>idno[1]"`
+	Keywords []string `xml:"teiHeader>profileDesc>textClass>keywords>term"`
 	Title    string   `xml:"teiHeader>fileDesc>titleStmt>title"`
 	Date     string   `xml:"teiHeader>fileDesc>publicationStmt>date"`
 	Abstract string   `xml:"teiHeader>profileDesc>abstract>div>p"`
-	Keywords string   `xml:"teiHeader>profileDesc>textClass>keywords>term"`
-	Doi      string   `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>idno[1]"`
-	Sections []string `xml:"text>body>div"`
-	Authors  []string `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>analytic>author"`
+	//Sections []xml.CharData `xml:"text>body>div"`
+	Sections []GrobidSection `xml:"text>body>div"`
+	Authors  string          `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>analytic>author"`
 }
 
-type DOI struct {
+type GrobidSection struct {
+	Head       string `xml:"head"`
+	RawContent string `xml:",innerxml"`
 }
 
 func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()) {
@@ -75,7 +76,7 @@ func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()
 	*healthStatus = isHealthy
 }
 
-func SendPDF2Grobid(fileContent []byte) (*GrobidResponse, error) {
+func SendPDF2Grobid(fileContent []byte) (*CrudeGrobidResponse, error) {
 	// Create a buffer to store the multipart form data
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
@@ -126,9 +127,10 @@ func SendPDF2Grobid(fileContent []byte) (*GrobidResponse, error) {
 		return nil, err
 	}
 	fmt.Println("Grobid successfully processed the file")
+	println(string(grobidResponse))
 
 	// Parse XML response
-	var parsedGrobidResponse GrobidResponse
+	var parsedGrobidResponse CrudeGrobidResponse
 	err = xml.Unmarshal(grobidResponse, &parsedGrobidResponse)
 	if err != nil {
 		return nil, err
@@ -136,50 +138,18 @@ func SendPDF2Grobid(fileContent []byte) (*GrobidResponse, error) {
 
 	//log the response
 	log.Printf("Grobid response: %+v\n", parsedGrobidResponse)
+
+	// Iterate through all the sections and print the length
+	for i, section := range parsedGrobidResponse.Sections {
+		fmt.Printf("Section %d length: %d\n", i+1, len(section.RawContent))
+
+		// Print the raw XML content as-is
+		fmt.Printf("Section %d Raw Content:\n%s\n", i+1, section.RawContent)
+
+		// Access the head of the section if needed
+		fmt.Printf("Section %d Head: %s\n", i+1, section.Head)
+	}
+
+	fmt.Println("First keyword: ", parsedGrobidResponse.Keywords[0])
 	return &parsedGrobidResponse, nil
-}
-
-// GetDOIFromString extracts a DOI from a given string
-func GetDOIFromString(response []byte, text string) string {
-	matches := DOIRegex.FindStringSubmatch(text)
-	if len(matches) > 0 {
-		return matches[0]
-	}
-	return ""
-}
-
-// ExtractKeywords extracts keywords from the Grobid response
-func extractKeywords(response []byte, keywords string) []string {
-	if keywords != "" {
-		// If keywords is set and is not an array, split it by space if after that space there is a capital letter
-		keywordsArr := strings.FieldsFunc(keywords, func(r rune) bool {
-			return r == ' ' || r == '\t' || r == '\n' || r == '\r'
-		})
-
-		// Remove empty values and trim each value
-		var cleanedKeywords []string
-		for _, value := range keywordsArr {
-			if value != "" {
-				cleanedKeywords = append(cleanedKeywords, strings.TrimSpace(value))
-			}
-		}
-
-		if len(cleanedKeywords) > 0 {
-			return cleanedKeywords
-		}
-	}
-
-	return nil
-}
-
-// ExtractYear extracts the year from the Grobid response date
-func (ph *PDFHelper) extractYear(date string) int {
-	if date != "" {
-		parsedDate, err := time.Parse("2006-01-02", date)
-		if err == nil {
-			return parsedDate.Year()
-		}
-	}
-
-	return 0
 }

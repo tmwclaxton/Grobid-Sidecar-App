@@ -68,7 +68,7 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 	return fileContent, nil
 }
 
-func sendFileToGrobid(fileContent []byte) (*grobid.GrobidResponse, error) {
+func sendFileToGrobid(fileContent []byte) (*grobid.CrudeGrobidResponse, error) {
 	response, err := grobid.SendPDF2Grobid(fileContent)
 	if err != nil {
 		return nil, err
