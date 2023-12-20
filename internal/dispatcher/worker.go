@@ -115,16 +115,27 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	}
 
 	// cross reference data using the DOI
-	crudeCrossRefResponse, err := parsing.CrossReferenceData(tidyGrobidResponse.Doi)
+	crossRefResponse, err := parsing.CrossReferenceData(tidyGrobidResponse.Doi)
 	if err != nil {
 		log.Println("Error cross referencing data:", err)
 		return
 	}
 
-	// tidy up cross referenced data
-	_ = parsing.TidyCrossRefData(crudeCrossRefResponse)
+	// create a PDFDTO
+	pdfDTO := parsing.CreatePDFDTO(tidyGrobidResponse, crossRefResponse)
 
-	// give preference to crossref data
+	//log.Printf("PDFDTO: %+v\n", pdfDTO)
+
+	log.Printf("Title: %s\n", pdfDTO.Title)
+	log.Printf("DOI: %s\n", pdfDTO.DOI)
+	log.Printf("Date: %s\n", pdfDTO.Date)
+	log.Printf("Year: %s\n", pdfDTO.Year)
+	log.Printf("Abstract: %s\n", pdfDTO.Abstract)
+	log.Printf("Keywords: %v\n", pdfDTO.Keywords)
+	//log.Printf("Sections: %v\n", pdfDTO.Sections)
+	//log.Printf("Authors: %v\n", pdfDTO.Authors)
+	//log.Printf("Journal: %s\n", pdfDTO.Journal)
+	//log.Printf("Notes: %s\n", pdfDTO.Notes)
 
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()

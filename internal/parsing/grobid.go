@@ -33,23 +33,27 @@ type CrudeGrobidResponse struct {
 	Authors  []AuthorsRaw `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>analytic>author"`
 }
 
+type TidyGrobidResponse struct {
+	Doi      string   `json:"doi"`
+	Keywords []string `json:"keywords"`
+	Title    string   `json:"title"`
+	Date     string   `json:"date"`
+	Year     string   `json:"year"`
+	Abstract string   `json:"abstract"`
+	Sections []string `json:"sections"`
+	Authors  []string `json:"authors"`
+	Journal  string   `json:"journal"`
+	Notes    string   `json:"notes"`
+}
+
 type IdnosRaw struct {
 	RawContent string `xml:",innerxml"`
 }
 
-type TidyGrobidResponse struct {
-	Doi      string       `json:"doi"`
-	Keywords []string     `json:"keywords"`
-	Title    string       `json:"title"`
-	Date     string       `json:"date"`
-	Year     string       `json:"year"`
-	Abstract string       `json:"abstract"`
-	Sections []SectionRaw `json:"sections"`
-	Authors  []AuthorsRaw `json:"authors"`
-}
-
 type SectionRaw struct {
 	RawContent string `xml:",innerxml"`
+	Head       string `xml:"head"`
+	P          string `xml:"p"`
 }
 
 type KeywordsRaw struct {
@@ -180,21 +184,23 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	}
 
 	tidyResponse.Title = crudeResponse.Title
+	log.Println("Crude date:", crudeResponse.Date)
 	tidyResponse.Date = crudeResponse.Date
-	log.Println("Date:", tidyResponse.Date)
+	log.Println("Tidy date:", tidyResponse.Date)
 	//tidyResponse.Year
 	if tidyResponse.Date != "" {
 		// convert 4 July 2020  to 2020
 		tidyResponse.Year = tidyResponse.Date[len(tidyResponse.Date)-4:]
 		//tidyResponse.Year = carbon.NewCarbon(strings.TrimSpace(tidyResponse.Year)).ToYearString()
-		log.Println("Year:", tidyResponse.Year)
+		//log.Println("Year:", tidyResponse.Year)
 	}
 	tidyResponse.Abstract = crudeResponse.Abstract
 	for _, section := range crudeResponse.Sections {
-		tidyResponse.Sections = append(tidyResponse.Sections, section)
+		tidyResponse.Sections = append(tidyResponse.Sections, section.RawContent)
 	}
 	for _, author := range crudeResponse.Authors {
-		tidyResponse.Authors = append(tidyResponse.Authors, author)
+		tidyResponse.Authors = append(tidyResponse.Authors, author.RawContent)
+		//log.Printf("Author: %s\n", author.RawContent)
 	}
 	return &tidyResponse, nil
 }
