@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
 	"strconv"
 	"sync"
@@ -20,7 +21,6 @@ import (
 
 	"simple-go-app/internal/dispatcher"
 	"simple-go-app/internal/envHelper"
-	"simple-go-app/internal/grobid"
 )
 
 var (
@@ -91,10 +91,10 @@ func main() {
 
 	// Start a timer for periodic health checks
 	go func() {
-		grobid.CheckGrobidHealth(&healthStatus, &healthMutex, workFunc)
+		parsing.CheckGrobidHealth(&healthStatus, &healthMutex, workFunc)
 		for {
 			time.Sleep(5 * time.Minute) // Adjust the interval as needed
-			grobid.CheckGrobidHealth(&healthStatus, &healthMutex)
+			parsing.CheckGrobidHealth(&healthStatus, &healthMutex)
 		}
 	}()
 

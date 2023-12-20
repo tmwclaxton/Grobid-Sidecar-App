@@ -10,6 +10,7 @@ func LoadEnv() {
 	err := godotenv.Load()
 	if err != nil {
 		// Not fatal, just log the error and continue
+		// This is because we want to also be able to pass environment variables via docker-compose or ecs task definitions
 		log.Println("Couldn't load .env file:", err)
 	}
 }

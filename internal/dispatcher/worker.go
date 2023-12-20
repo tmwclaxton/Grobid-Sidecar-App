@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"simple-go-app/internal/envHelper"
-	"simple-go-app/internal/grobid"
+	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
 	"sync"
 	"time"
@@ -68,14 +68,6 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 	return fileContent, nil
 }
 
-func sendFileToGrobid(fileContent []byte) (*grobid.CrudeGrobidResponse, error) {
-	response, err := grobid.SendPDF2Grobid(fileContent)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
-}
-
 func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, minGap time.Duration) {
 	var msgData map[string]interface{}
 	if err := json.Unmarshal([]byte(*message.Body), &msgData); err != nil {
@@ -84,9 +76,10 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	}
 
 	path := msgData["s3Location"].(string)
-	operation := msgData["operation"].(string)
+	userID := msgData["user_id"].(string)
+	screenID := msgData["screen_id"].(string)
 
-	fmt.Printf("Worker %d received message. Path: %s. Operation: %s\n", id, path, operation)
+	fmt.Printf("Worker %d received message. Path: %s. User ID: %s. Screen ID: %s\n", id, path, userID, screenID)
 
 	lastRequestTimeMu.Lock()
 	timeSinceLastRequest := time.Since(lastRequestTime)
@@ -108,17 +101,30 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		return
 	}
 
-	_, err = sendFileToGrobid(fileContent)
+	CrudeGrobidResponse, err := parsing.SendPDF2Grobid(fileContent)
 	if err != nil {
 		log.Println("Error sending file to Grobid service:", err)
 		return
 	}
 
-	// Print a portion of the Grobid service response
-	//fmt.Println(string(response[0:100]))
+	// clean up grobid response
+	tidyGrobidResponse, err := parsing.TidyUpGrobidResponse(CrudeGrobidResponse)
+	if err != nil {
+		log.Println("Error tidying up Grobid response:", err)
+		return
+	}
 
-	// Convert the well-formed XML response to an XML file
-	// cast the response to an xml object
+	// cross reference data using the DOI
+	crudeCrossRefResponse, err := parsing.CrossReferenceData(tidyGrobidResponse.Doi)
+	if err != nil {
+		log.Println("Error cross referencing data:", err)
+		return
+	}
+
+	// tidy up cross referenced data
+	_ = parsing.TidyCrossRefData(crudeCrossRefResponse)
+
+	// give preference to crossref data
 
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()

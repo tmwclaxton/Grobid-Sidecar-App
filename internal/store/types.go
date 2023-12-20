@@ -1,5 +1,14 @@
 package store
 
+type PDFDTO struct {
+	Title    string   `json:"title"`
+	Abstract string   `json:"abstract"`
+	Year     string   `json:"year"`
+	DOI      string   `json:"doi"`
+	Authors  []string `json:"authors"`
+	Sections []string `json:"sections"`
+}
+
 type Paper struct {
 	ID        int64  `json:"id"`
 	Slug      string `json:"slug"`
