@@ -17,28 +17,13 @@ type Paper struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
-func (s *Store) GetPaperBySlug(slug string) (*Paper, error) {
-	paper := Paper{}
-	err := s.db.QueryRow("SELECT * FROM papers WHERE slug = ?", slug).Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.CreatedAt, &paper.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &paper, nil
-}
-
-func (s *Store) GetPaperByID(id int64) (*Paper, error) {
-	paper := Paper{}
-	err := s.db.QueryRow("SELECT * FROM papers WHERE id = ?", id).Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.CreatedAt, &paper.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &paper, nil
-}
-
-func (s *Store) CreatePaper(paper *Paper) (int64, error) {
-	result, err := s.db.Exec("INSERT INTO papers (slug, custom_key, issn, doi, user_id, screen_id, title, abstract, journal, year, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", paper.Slug, paper.CustomKey, paper.ISSN, paper.DOI, paper.UserID, paper.ScreenID, paper.Title, paper.Abstract, paper.Journal, paper.Year, paper.Notes, paper.CreatedAt, paper.UpdatedAt)
-	if err != nil {
-		return 0, err
-	}
-	return result.LastInsertId()
+type Section struct {
+	ID        int64  `json:"id"`
+	PaperID   int64  `json:"paper_id"`
+	Order     int64  `json:"order"`
+	Header    string `json:"header"`
+	Text      string `json:"text"`
+	Embedding string `json:"embedding"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
