@@ -20,18 +20,26 @@ import (
 
 // CrudeGrobidResponse represents the structure of the Grobid service response.
 type CrudeGrobidResponse struct {
-	Doi      string   `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>idno[1]"`
-	Keywords []string `xml:"teiHeader>profileDesc>textClass>keywords>term"`
-	Title    string   `xml:"teiHeader>fileDesc>titleStmt>title"`
-	Date     string   `xml:"teiHeader>fileDesc>publicationStmt>date"`
-	Abstract string   `xml:"teiHeader>profileDesc>abstract>div>p"`
-	//Sections []xml.CharData `xml:"text>body>div"`
-	Sections []GrobidSection `xml:"text>body>div"`
-	Authors  string          `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>analytic>author"`
+	Raw      string       `xml:",innerxml"`
+	Doi      string       `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>idno[1]"`
+	Keywords KeywordsRaw  `xml:"teiHeader>profileDesc>textClass>keywords"`
+	Title    string       `xml:"teiHeader>fileDesc>titleStmt>title"`
+	Date     string       `xml:"teiHeader>fileDesc>publicationStmt>date"`
+	Abstract string       `xml:"teiHeader>profileDesc>abstract>div>p"`
+	Sections []SectionRaw `xml:"text>body>div"`
+	Authors  []AuthorsRaw `xml:"teiHeader>fileDesc>sourceDesc>biblStruct>analytic>author"`
 }
 
-type GrobidSection struct {
-	Head       string `xml:"head"`
+type SectionRaw struct {
+	RawContent string `xml:",innerxml"`
+}
+
+type KeywordsRaw struct {
+	Term       []string `xml:"term"`
+	RawContent string   `xml:",innerxml"`
+}
+
+type AuthorsRaw struct {
 	RawContent string `xml:",innerxml"`
 }
 
@@ -127,7 +135,7 @@ func SendPDF2Grobid(fileContent []byte) (*CrudeGrobidResponse, error) {
 		return nil, err
 	}
 	fmt.Println("Grobid successfully processed the file")
-	println(string(grobidResponse))
+	//println(string(grobidResponse))
 
 	// Parse XML response
 	var parsedGrobidResponse CrudeGrobidResponse
@@ -137,19 +145,22 @@ func SendPDF2Grobid(fileContent []byte) (*CrudeGrobidResponse, error) {
 	}
 
 	//log the response
-	log.Printf("Grobid response: %+v\n", parsedGrobidResponse)
+	//log.Printf("Grobid response: %+v\n", parsedGrobidResponse)
 
 	// Iterate through all the sections and print the length
-	for i, section := range parsedGrobidResponse.Sections {
-		fmt.Printf("Section %d length: %d\n", i+1, len(section.RawContent))
+	//for i, section := range parsedGrobidResponse.Sections {
+	//	fmt.Printf("Section %d length: %d\n", i+1, len(section.RawContent))
+	//}
+	//
+	//// Iterate through all the authors and print the length
+	//for i, author := range parsedGrobidResponse.Authors {
+	//	fmt.Printf("Author %d length: %d\n", i+1, len(author.RawContent))
+	//}
+	//
+	//// Iterate through all the keywords and print the length
+	//for i, keyword := range parsedGrobidResponse.Keywords.Term {
+	//	fmt.Printf("Keyword %d length: %d\n", i+1, len(keyword))
+	//}
 
-		// Print the raw XML content as-is
-		fmt.Printf("Section %d Raw Content:\n%s\n", i+1, section.RawContent)
-
-		// Access the head of the section if needed
-		fmt.Printf("Section %d Head: %s\n", i+1, section.Head)
-	}
-
-	fmt.Println("First keyword: ", parsedGrobidResponse.Keywords[0])
 	return &parsedGrobidResponse, nil
 }
