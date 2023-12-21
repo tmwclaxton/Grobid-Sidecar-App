@@ -1,4 +1,4 @@
-package envHelper
+package helpers
 
 import (
 	"github.com/joho/godotenv"

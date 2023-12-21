@@ -6,9 +6,11 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"simple-go-app/internal/envHelper"
+	"simple-go-app/internal/helpers"
 	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,8 +26,8 @@ var (
 )
 
 func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string, s *store.Store) {
-	awsRegion := envHelper.GetEnvVariable("AWS_REGION")
-	minGapBetweenRequests := envHelper.GetEnvVariable("MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS")
+	awsRegion := helpers.GetEnvVariable("AWS_REGION")
+	minGapBetweenRequests := helpers.GetEnvVariable("MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS")
 	minGap, err := time.ParseDuration(minGapBetweenRequests + "s")
 	if err != nil {
 		log.Fatalf("Error parsing MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS: %v", err)
@@ -35,7 +37,7 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 
 	for {
 		message := <-messageQueue
-		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, minGap)
+		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, minGap, s)
 	}
 }
 
@@ -68,7 +70,7 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 	return fileContent, nil
 }
 
-func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, minGap time.Duration) {
+func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, minGap time.Duration, s *store.Store) {
 	var msgData map[string]interface{}
 	if err := json.Unmarshal([]byte(*message.Body), &msgData); err != nil {
 		log.Println("Error decoding JSON message:", err)
@@ -77,7 +79,8 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 
 	path := msgData["s3Location"].(string)
 	userID := msgData["user_id"].(string)
-	screenID := msgData["screen_id"].(string)
+	screenIDTemp := msgData["screen_id"].(string)
+	screenID, err := strconv.ParseInt(screenIDTemp, 10, 64)
 
 	fmt.Printf("Worker %d received message. Path: %s. User ID: %s. Screen ID: %s\n", id, path, userID, screenID)
 
@@ -124,29 +127,114 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	// create a PDFDTO
 	pdfDTO := parsing.CreatePDFDTO(tidyGrobidResponse, crossRefResponse)
 
-	//log.Printf("PDFDTO: %+v\n", pdfDTO)
-
-	log.Printf("Title: %s\n", pdfDTO.Title)
-	log.Printf("DOI: %s\n", pdfDTO.DOI)
-	log.Printf("Date: %s\n", pdfDTO.Date)
-	log.Printf("Year: %s\n", pdfDTO.Year)
-	log.Printf("Abstract: %s\n", pdfDTO.Abstract)
-	log.Printf("Keywords: %v\n", pdfDTO.Keywords)
+	//log.Printf("Title: %s\n", pdfDTO.Title)
+	//log.Printf("DOI: %s\n", pdfDTO.DOI)
+	//log.Printf("Date: %s\n", pdfDTO.Date)
+	//log.Printf("Year: %s\n", pdfDTO.Year)
+	//log.Printf("Abstract: %s\n", pdfDTO.Abstract)
+	//log.Printf("Keywords: %v\n", pdfDTO.Keywords)
 	//log.Printf("Sections: %v\n", pdfDTO.Sections)
 	//log.Printf("Authors: %v\n", pdfDTO.Authors)
 	//log.Printf("Journal: %s\n", pdfDTO.Journal)
 	//log.Printf("Notes: %s\n", pdfDTO.Notes)
 
+	if pdfDTO.DOI == "" {
+		s.FindDOIFromPaperRepository(pdfDTO, screenID)
+	}
+
+	log.Printf("DOI: %s\n", pdfDTO.DOI)
+
+	paper := &store.Paper{}
+	paperAlreadyExists := false
+	if pdfDTO.DOI != "" {
+		paper, _ = s.FindPaperByDOI(screenID, pdfDTO.DOI)
+	} else if pdfDTO.Title != "" && pdfDTO.Abstract != "" {
+		paper = s.FindPaperByTitleAndAbstract(screenID, pdfDTO.Title, pdfDTO.Abstract)
+	} else if pdfDTO.Title != "" {
+		paper = s.FindPaperByTitle(screenID, pdfDTO.Title)
+	} else {
+		paper = nil
+	}
+
+	//log.Printf("Paper: %v\n", paper.ID)
+	//log.Printf("Paper exists: %v\n", paper == nil)
+
+	if paper.ID == 0 {
+		log.Println("Creating paper pt 1...")
+		paper, err = s.CreatePaper(pdfDTO, userID, screenID)
+		if err != nil {
+			log.Println("Error creating paper:", err)
+		}
+	} else {
+		paperAlreadyExists = true
+	}
+
+	// ---- Sections ----
+	// get sections and headings from $dto
+
+	// initialise sections off by setting the first section to the abstract
+	sections := []store.Section{
+		{
+			Header: "Abstract",
+			Text:   pdfDTO.Abstract,
+		},
+	}
+	// iterate through sections and add them to the sections array
+	for _, section := range pdfDTO.Sections {
+		if len(section.P) == 0 {
+			continue
+		}
+		section.Head = strings.ToLower(section.Head)
+
+		for _, p := range section.P {
+			sections = append(sections, store.Section{
+				Header: section.Head,
+				Text:   p,
+			})
+		}
+	}
+
+	// if new section (by p), save it, else skip, give ascending order
+	// the embeddings will be created later elsewhere when the user wants to screen the full text
+	order := 0
+	if paperAlreadyExists {
+		order = int(s.GetNextSectionOrder(paper.ID))
+	}
+
+	for _, section := range sections {
+		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
+		if err != nil {
+			return
+		}
+		order++
+	}
+
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()
 	lastRequestTimeMu.Unlock()
 
-	_, err = svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
-		QueueUrl:          aws.String(sqsURL),
-		ReceiptHandle:     message.ReceiptHandle,
-		VisibilityTimeout: aws.Int64(30),
-	})
-	if err != nil {
-		log.Println("Error putting message back to the queue:", err)
+	if helpers.GetEnvVariable("ENVIRONMENT") != "production" {
+		_, err = svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
+			QueueUrl:          aws.String(sqsURL),
+			ReceiptHandle:     message.ReceiptHandle,
+			VisibilityTimeout: aws.Int64(30),
+		})
+		if err != nil {
+			log.Println("Error putting message back to the queue:", err)
+		}
+	} else {
+		_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
+			QueueUrl:      aws.String(sqsURL),
+			ReceiptHandle: message.ReceiptHandle,
+		})
+		if err != nil {
+			log.Println("Error deleting message:", err)
+		}
+
+		// delete file from S3
+		_, err = s3Svc.DeleteObject(&s3.DeleteObjectInput{
+			Bucket: aws.String(s3Bucket),
+			Key:    aws.String(path),
+		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"simple-go-app/internal/helpers"
 	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
 	"strconv"
@@ -20,7 +21,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"simple-go-app/internal/dispatcher"
-	"simple-go-app/internal/envHelper"
 )
 
 var (
@@ -30,22 +30,22 @@ var (
 
 func main() {
 	// Load environment variables
-	envHelper.LoadEnv()
+	helpers.LoadEnv()
 
 	// Get environment variables
-	sqsPrefix := envHelper.GetEnvVariable("SQS_PREFIX")
-	requestsQueueName := envHelper.GetEnvVariable("REQUESTS_QUEUE")
+	sqsPrefix := helpers.GetEnvVariable("SQS_PREFIX")
+	requestsQueueName := helpers.GetEnvVariable("REQUESTS_QUEUE")
 	sqsURL := fmt.Sprintf("%s/%s", sqsPrefix, requestsQueueName)
-	awsSecretKey := envHelper.GetEnvVariable("AWS_SECRET_ACCESS_KEY")
-	awsAccessKey := envHelper.GetEnvVariable("AWS_ACCESS_KEY_ID")
-	awsRegion := envHelper.GetEnvVariable("AWS_REGION")
-	awsBucket := envHelper.GetEnvVariable("AWS_BUCKET")
+	awsSecretKey := helpers.GetEnvVariable("AWS_SECRET_ACCESS_KEY")
+	awsAccessKey := helpers.GetEnvVariable("AWS_ACCESS_KEY_ID")
+	awsRegion := helpers.GetEnvVariable("AWS_REGION")
+	awsBucket := helpers.GetEnvVariable("AWS_BUCKET")
 	//dbConnectionString := envHelper.GetEnvVariable("DB_CONNECTION_STRING")
-	dbHost := envHelper.GetEnvVariable("DB_HOST")
-	dbPort := envHelper.GetEnvVariable("DB_PORT")
-	dbUser := envHelper.GetEnvVariable("DB_USERNAME")
-	dbPassword := envHelper.GetEnvVariable("DB_PASSWORD")
-	dbName := envHelper.GetEnvVariable("DB_DATABASE")
+	dbHost := helpers.GetEnvVariable("DB_HOST")
+	dbPort := helpers.GetEnvVariable("DB_PORT")
+	dbUser := helpers.GetEnvVariable("DB_USERNAME")
+	dbPassword := helpers.GetEnvVariable("DB_PASSWORD")
+	dbName := helpers.GetEnvVariable("DB_DATABASE")
 	log.Println("Environment variables loaded successfully.")
 
 	// Set up mysql connection
@@ -82,7 +82,7 @@ func main() {
 	go dispatcher.Dispatcher(sqsSvc, sqsURL, messageQueue)
 
 	workFunc := func() {
-		numWorkers, _ := strconv.Atoi(envHelper.GetEnvVariable("WORKER_COUNT"))
+		numWorkers, _ := strconv.Atoi(helpers.GetEnvVariable("WORKER_COUNT"))
 		// Start three workers
 		for i := 1; i <= numWorkers; i++ {
 			go dispatcher.Worker(i, messageQueue, sqsSvc, sqsURL, awsBucket, s)

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"simple-go-app/internal/helpers"
+
 	//"github.com/uniplaces/carbon"
 	"io"
 	"io/ioutil"
@@ -11,7 +13,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"regexp"
-	"simple-go-app/internal/envHelper"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,16 +35,16 @@ type CrudeGrobidResponse struct {
 }
 
 type TidyGrobidResponse struct {
-	Doi      string   `json:"doi"`
-	Keywords []string `json:"keywords"`
-	Title    string   `json:"title"`
-	Date     string   `json:"date"`
-	Year     string   `json:"year"`
-	Abstract string   `json:"abstract"`
-	Sections []string `json:"sections"`
-	Authors  []string `json:"authors"`
-	Journal  string   `json:"journal"`
-	Notes    string   `json:"notes"`
+	Doi      string       `json:"doi"`
+	Keywords []string     `json:"keywords"`
+	Title    string       `json:"title"`
+	Date     string       `json:"date"`
+	Year     string       `json:"year"`
+	Abstract string       `json:"abstract"`
+	Sections []SectionRaw `json:"sections"`
+	Authors  []AuthorsRaw `json:"authors"`
+	Journal  string       `json:"journal"`
+	Notes    string       `json:"notes"`
 }
 
 type IdnosRaw struct {
@@ -51,9 +52,9 @@ type IdnosRaw struct {
 }
 
 type SectionRaw struct {
-	RawContent string `xml:",innerxml"`
-	Head       string `xml:"head"`
-	P          string `xml:"p"`
+	RawContent string   `xml:",innerxml"`
+	Head       string   `xml:"head"`
+	P          []string `xml:"p"`
 }
 
 type KeywordsRaw struct {
@@ -91,9 +92,9 @@ func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()
 	isHealthy := resp.StatusCode >= 200 && resp.StatusCode < 300
 
 	if isHealthy {
-		fmt.Printf("Waiting %s seconds before starting workers...\n", envHelper.GetEnvVariable("START_DELAY_SECONDS"))
+		fmt.Printf("Waiting %s seconds before starting workers...\n", helpers.GetEnvVariable("START_DELAY_SECONDS"))
 		// Introduce a 15-second delay before updating healthStatus to true
-		startDelay := envHelper.GetEnvVariable("START_DELAY_SECONDS")
+		startDelay := helpers.GetEnvVariable("START_DELAY_SECONDS")
 		// Convert the startDelay string to an int
 		startDelayInt, _ := strconv.Atoi(startDelay)
 		time.Sleep(time.Duration(startDelayInt) * time.Second)
@@ -175,7 +176,7 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	//log.Printf("Crude IDNOs: %s\n", crudeResponse.IDNOs[1].RawContent)
 
 	tidyResponse.Doi = GetDOIFromString(crudeResponse.IDNOs[1].RawContent)
-	log.Printf("Tidy doi: %s\n", tidyResponse.Doi)
+	//log.Printf("Tidy doi: %s\n", tidyResponse.Doi)
 	tidyResponse.Keywords = crudeResponse.Keywords.Term
 
 	// if keywords are empty, try to extract them from raw content
@@ -184,9 +185,9 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	}
 
 	tidyResponse.Title = crudeResponse.Title
-	log.Println("Crude date:", crudeResponse.Date)
+	//log.Println("Crude date:", crudeResponse.Date)
 	tidyResponse.Date = crudeResponse.Date
-	log.Println("Tidy date:", tidyResponse.Date)
+	//log.Println("Tidy date:", tidyResponse.Date)
 	//tidyResponse.Year
 	if tidyResponse.Date != "" {
 		// convert 4 July 2020  to 2020
@@ -196,10 +197,11 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	}
 	tidyResponse.Abstract = crudeResponse.Abstract
 	for _, section := range crudeResponse.Sections {
-		tidyResponse.Sections = append(tidyResponse.Sections, section.RawContent)
+		tidyResponse.Sections = append(tidyResponse.Sections, section)
+		//log.Printf("Section: %s\n", section.Head)
 	}
 	for _, author := range crudeResponse.Authors {
-		tidyResponse.Authors = append(tidyResponse.Authors, author.RawContent)
+		tidyResponse.Authors = append(tidyResponse.Authors, author)
 		//log.Printf("Author: %s\n", author.RawContent)
 	}
 	return &tidyResponse, nil
