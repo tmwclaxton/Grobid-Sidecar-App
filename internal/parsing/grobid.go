@@ -176,7 +176,7 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	//log.Printf("Crude IDNOs: %s\n", crudeResponse.IDNOs[1].RawContent)
 
 	tidyResponse.Doi = GetDOIFromString(crudeResponse.IDNOs[1].RawContent)
-	//log.Printf("Tidy doi: %s\n", tidyResponse.Doi)
+	log.Printf("Tidy doi: %s\n", tidyResponse.Doi)
 	tidyResponse.Keywords = crudeResponse.Keywords.Term
 
 	// if keywords are empty, try to extract them from raw content
@@ -280,6 +280,7 @@ func removeEmptyAndTrim(keywords []string) []string {
 func GetDOIFromString(content string) string {
 	// Check if the content is empty
 	if content == "" {
+		log.Println("DOI string is empty")
 		return ""
 	}
 
@@ -292,5 +293,6 @@ func GetDOIFromString(content string) string {
 		return matches[0]
 	}
 
+	log.Println("DOI not found")
 	return ""
 }

@@ -127,40 +127,26 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	// create a PDFDTO
 	pdfDTO := parsing.CreatePDFDTO(tidyGrobidResponse, crossRefResponse)
 
-	//log.Printf("Title: %s\n", pdfDTO.Title)
-	//log.Printf("DOI: %s\n", pdfDTO.DOI)
-	//log.Printf("Date: %s\n", pdfDTO.Date)
-	//log.Printf("Year: %s\n", pdfDTO.Year)
-	//log.Printf("Abstract: %s\n", pdfDTO.Abstract)
-	//log.Printf("Keywords: %v\n", pdfDTO.Keywords)
-	//log.Printf("Sections: %v\n", pdfDTO.Sections)
-	//log.Printf("Authors: %v\n", pdfDTO.Authors)
-	//log.Printf("Journal: %s\n", pdfDTO.Journal)
-	//log.Printf("Notes: %s\n", pdfDTO.Notes)
-
 	if pdfDTO.DOI == "" {
 		s.FindDOIFromPaperRepository(pdfDTO, screenID)
 	}
+	//log.Printf("DOI: %s\n", pdfDTO.DOI)
 
-	log.Printf("DOI: %s\n", pdfDTO.DOI)
-
-	paper := &store.Paper{}
+	var paper store.Paper
 	paperAlreadyExists := false
 	if pdfDTO.DOI != "" {
+		log.Println("Finding paper by DOI...")
 		paper, _ = s.FindPaperByDOI(screenID, pdfDTO.DOI)
 	} else if pdfDTO.Title != "" && pdfDTO.Abstract != "" {
-		paper = s.FindPaperByTitleAndAbstract(screenID, pdfDTO.Title, pdfDTO.Abstract)
+		log.Println("Finding paper by title and abstract...")
+		paper, _ = s.FindPaperByTitleAndAbstract(screenID, pdfDTO.Title, pdfDTO.Abstract)
 	} else if pdfDTO.Title != "" {
-		paper = s.FindPaperByTitle(screenID, pdfDTO.Title)
-	} else {
-		paper = nil
+		log.Println("Finding paper by title...")
+		paper, _ = s.FindPaperByTitle(screenID, pdfDTO.Title)
 	}
-
-	//log.Printf("Paper: %v\n", paper.ID)
-	//log.Printf("Paper exists: %v\n", paper == nil)
+	//log.Printf("DOI: %s\n", pdfDTO.DOI)
 
 	if paper.ID == 0 {
-		log.Println("Creating paper pt 1...")
 		paper, err = s.CreatePaper(pdfDTO, userID, screenID)
 		if err != nil {
 			log.Println("Error creating paper:", err)
@@ -168,6 +154,9 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	} else {
 		paperAlreadyExists = true
 	}
+
+	log.Printf("Paper exists: %v\n", paperAlreadyExists)
+	log.Printf("Paper ID: %v\n", paper.ID)
 
 	// ---- Sections ----
 	// get sections and headings from $dto
@@ -179,7 +168,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 			Text:   pdfDTO.Abstract,
 		},
 	}
-	// iterate through sections and add them to the sections array
+	//// iterate through sections and add them to the sections array
 	for _, section := range pdfDTO.Sections {
 		if len(section.P) == 0 {
 			continue
@@ -187,6 +176,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		section.Head = strings.ToLower(section.Head)
 
 		for _, p := range section.P {
+			log.Printf("Section: %s\n", section.P)
 			sections = append(sections, store.Section{
 				Header: section.Head,
 				Text:   p,
@@ -196,18 +186,20 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 
 	// if new section (by p), save it, else skip, give ascending order
 	// the embeddings will be created later elsewhere when the user wants to screen the full text
-	order := 0
-	if paperAlreadyExists {
-		order = int(s.GetNextSectionOrder(paper.ID))
-	}
-
-	for _, section := range sections {
-		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
-		if err != nil {
-			return
-		}
-		order++
-	}
+	//order := 0
+	//if paperAlreadyExists {
+	//	order = int(s.GetNextSectionOrder(paper.ID))
+	//}
+	//
+	//for _, section := range sections {
+	//	log.Printf("Section: %s\n", section.Header)
+	//	log.Printf("Text: %s\n", section.Text)
+	//	_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
+	//	if err != nil {
+	//		return
+	//	}
+	//	order++
+	//}
 
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()
