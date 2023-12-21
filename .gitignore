@@ -1671,3 +1671,6 @@
 /vendor/github.com/uniplaces/carbon/lang/vi.json
 /vendor/github.com/uniplaces/carbon/lang/zh.json
 /vendor/github.com/uniplaces/carbon/lang/zh_TW.json
+/vendor/golang.org/x/sync/LICENSE
+/vendor/golang.org/x/sync/PATENTS
+/vendor/golang.org/x/sync/semaphore/semaphore.go

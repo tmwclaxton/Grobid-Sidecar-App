@@ -1,6 +1,7 @@
 package dispatcher
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,11 +19,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"golang.org/x/sync/semaphore"
 )
 
 var (
 	lastRequestTime   time.Time
 	lastRequestTimeMu sync.Mutex
+	grobidSemaphore   = semaphore.NewWeighted(1)
 )
 
 func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string, s *store.Store) {
@@ -93,6 +96,13 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
 		time.Sleep(sleepTime)
 	}
+
+	// Acquire a semaphore before accessing the critical section
+	if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
+		log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
+		return
+	}
+	defer grobidSemaphore.Release(1) // Release the semaphore when the function exits
 
 	sess := createAWSSession(awsRegion)
 	s3Svc := s3.New(sess)
@@ -239,6 +249,9 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 			Bucket: aws.String(s3Bucket),
 			Key:    aws.String(path),
 		})
+		if err != nil {
+			log.Println("Error deleting file from S3:", err)
+		}
 	}
 
 	log.Printf("Worker %d finished processing message\n", id)
