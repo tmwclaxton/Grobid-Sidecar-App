@@ -7,11 +7,6 @@ services:
       context: .
     ports:
       - "591:8080"
-      - "40000:40000"
-    security_opt:
-      - "seccomp:unconfined"
-    cap_add:
-      - SYS_PTRACE
     working_dir: &PROJECT_ROOT_DIR /app
     # linux permissions / vscode support: we must explicitly run as the development user
     user: development

@@ -57,6 +57,9 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 			log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
 			time.Sleep(sleepTime)
 		}
+		lastRequestTimeMu.Lock()
+		lastRequestTime = time.Now()
+		lastRequestTimeMu.Unlock()
 		grobidSemaphore.Release(1) // Release the semaphore when the function exits
 
 		log.Printf("Worker %d releasing semaphore\n", id)
@@ -241,10 +244,6 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		order++
 	}
 	log.Printf("Sections iterated: %d\n", len(sections))
-
-	lastRequestTimeMu.Lock()
-	lastRequestTime = time.Now()
-	lastRequestTimeMu.Unlock()
 
 	if helpers.GetEnvVariable("ENVIRONMENT") != "production" {
 		_, err = svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
