@@ -194,3 +194,33 @@ func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID string, screenID int
 
 	return paper, nil
 }
+
+func (store *Store) GetNextSectionOrder(paperID int64) (int, interface{}) {
+	var order int
+	err := store.db.QueryRow("SELECT COALESCE(MAX(`order`), -1) + 1 FROM sections WHERE paper_id = ?", paperID).Scan(&order)
+	if err != nil {
+		return 0, err
+	}
+	return order, nil
+}
+
+func (store *Store) CreateSection(paperID int64, header string, text string, order int) (interface{}, interface{}) {
+	var section Section
+	_, err := store.db.Exec("INSERT INTO sections (paper_id, header, text, `order`, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", paperID, header, text, order, carbon.Now().DateTimeString(), carbon.Now().DateTimeString())
+	if err != nil {
+		return section, err
+	}
+
+	section, _ = store.FindSectionByPaperAndPosition(paperID, order)
+
+	return section, nil
+}
+
+func (store *Store) FindSectionByPaperAndPosition(paperID int64, position int) (Section, interface{}) {
+	var section Section
+	err := store.db.QueryRow("SELECT * FROM sections WHERE paper_id = ? AND `order` = ?", paperID, position).Scan(&section.ID, &section.PaperID, &section.Order, &section.Header, &section.Text, &section.Embedding, &section.CreatedAt, &section.UpdatedAt)
+	if err != nil {
+		return Section{}, err
+	}
+	return section, nil
+}

@@ -176,7 +176,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		section.Head = strings.ToLower(section.Head)
 
 		for _, p := range section.P {
-			log.Printf("Section: %s\n", section.P)
+			//log.Printf("Section header: %s\n Section text length: %d\n", section.Head, len(p))
 			sections = append(sections, store.Section{
 				Header: section.Head,
 				Text:   p,
@@ -186,20 +186,21 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 
 	// if new section (by p), save it, else skip, give ascending order
 	// the embeddings will be created later elsewhere when the user wants to screen the full text
-	//order := 0
-	//if paperAlreadyExists {
-	//	order = int(s.GetNextSectionOrder(paper.ID))
-	//}
-	//
-	//for _, section := range sections {
-	//	log.Printf("Section: %s\n", section.Header)
-	//	log.Printf("Text: %s\n", section.Text)
-	//	_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
-	//	if err != nil {
-	//		return
-	//	}
-	//	order++
-	//}
+	order := 0
+	if paperAlreadyExists {
+		orderTemp, _ := s.GetNextSectionOrder(paper.ID)
+		order = int(orderTemp)
+	}
+
+	for _, section := range sections {
+		log.Printf("Section: %s\n", section.Header)
+		log.Printf("Text: %s\n", section.Text)
+		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
+		if err != nil {
+			return
+		}
+		order++
+	}
 
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()
