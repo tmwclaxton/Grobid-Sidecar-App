@@ -6,7 +6,7 @@ services:
     build:
       context: .
     ports:
-      - "80:8080"
+      - "591:8080"
       - "40000:40000"
     security_opt:
       - "seccomp:unconfined"

@@ -40,7 +40,28 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 
 	for {
 		message := <-messageQueue
-		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, minGap, s)
+		lastRequestTimeMu.Lock()
+		timeSinceLastRequest := time.Since(lastRequestTime)
+		lastRequestTimeMu.Unlock()
+
+		// Acquire a semaphore before accessing the critical section
+		if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
+			log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
+			return
+		}
+		log.Printf("Worker %d acquired semaphore\n", id)
+
+		// If the time since the last request is less than the minimum gap between requests, sleep for the difference
+		if timeSinceLastRequest < minGap {
+			sleepTime := minGap - timeSinceLastRequest
+			log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
+			time.Sleep(sleepTime)
+		}
+		grobidSemaphore.Release(1) // Release the semaphore when the function exits
+
+		log.Printf("Worker %d releasing semaphore\n", id)
+
+		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
 	}
 }
 
@@ -73,7 +94,7 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 	return fileContent, nil
 }
 
-func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, minGap time.Duration, s *store.Store) {
+func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, s *store.Store) {
 	var msgData map[string]interface{}
 	if err := json.Unmarshal([]byte(*message.Body), &msgData); err != nil {
 		log.Println("Error decoding JSON message:", err)
@@ -102,23 +123,6 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	screenID, err := strconv.ParseInt(screenIDTemp, 10, 64)
 
 	fmt.Printf("Worker %d received message. Path: %s. User ID: %s. Screen ID: %s\n", id, path, userID, screenID)
-
-	lastRequestTimeMu.Lock()
-	timeSinceLastRequest := time.Since(lastRequestTime)
-	lastRequestTimeMu.Unlock()
-
-	if timeSinceLastRequest < minGap {
-		sleepTime := minGap - timeSinceLastRequest
-		log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
-		time.Sleep(sleepTime)
-	}
-
-	// Acquire a semaphore before accessing the critical section
-	if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
-		log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
-		return
-	}
-	defer grobidSemaphore.Release(1) // Release the semaphore when the function exits
 
 	sess := createAWSSession(awsRegion)
 	s3Svc := s3.New(sess)
@@ -197,7 +201,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	// initialise sections off by setting the first section to the abstract
 	sections := []store.Section{
 		{
-			Header: "Abstract",
+			Header: "abstract",
 			Text:   pdfDTO.Abstract,
 		},
 	}

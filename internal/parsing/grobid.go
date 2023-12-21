@@ -172,7 +172,11 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 
 	//log.Printf("Crude IDNOs: %s\n", crudeResponse.IDNOs[1].RawContent)
 
-	tidyResponse.Doi = GetDOIFromString(crudeResponse.IDNOs[1].RawContent)
+	if len(crudeResponse.IDNOs) > 1 {
+		tidyResponse.Doi = GetDOIFromString(crudeResponse.IDNOs[1].RawContent)
+	} else {
+		tidyResponse.Doi = GetDOIFromString(crudeResponse.IDNOs[0].RawContent)
+	}
 	tidyResponse.Keywords = crudeResponse.Keywords.Term
 
 	// if keywords are empty, try to extract them from raw content
