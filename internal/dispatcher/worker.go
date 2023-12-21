@@ -80,6 +80,22 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		return
 	}
 
+	// check if message has all the required fields if not return error
+	if _, ok := msgData["s3Location"]; !ok {
+		log.Println("Message missing s3Location field")
+		return
+	}
+
+	if _, ok := msgData["user_id"]; !ok {
+		log.Println("Message missing user_id field")
+		return
+	}
+
+	if _, ok := msgData["screen_id"]; !ok {
+		log.Println("Message missing screen_id field")
+		return
+	}
+
 	path := msgData["s3Location"].(string)
 	userID := msgData["user_id"].(string)
 	screenIDTemp := msgData["screen_id"].(string)
