@@ -25,12 +25,16 @@ import (
 var (
 	lastRequestTime   time.Time
 	lastRequestTimeMu sync.Mutex
+	totalRequests     int
 	grobidSemaphore   = semaphore.NewWeighted(1)
 )
 
 func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string, s *store.Store) {
 	awsRegion := helpers.GetEnvVariable("AWS_REGION")
 	minGapBetweenRequests := helpers.GetEnvVariable("MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS")
+	// convert  helpers.GetEnvVariable("GRACE_PERIOD_REQUESTS") to int64
+	gracePeriodRequests, _ := strconv.Atoi(helpers.GetEnvVariable("GRACE_PERIOD_REQUESTS"))
+
 	minGap, err := time.ParseDuration(minGapBetweenRequests + "s")
 	if err != nil {
 		log.Fatalf("Error parsing MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS: %v", err)
@@ -52,7 +56,7 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 		log.Printf("Worker %d acquired semaphore\n", id)
 
 		// If the time since the last request is less than the minimum gap between requests, sleep for the difference
-		if timeSinceLastRequest < minGap {
+		if timeSinceLastRequest < minGap || totalRequests < gracePeriodRequests {
 			sleepTime := minGap - timeSinceLastRequest
 			log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
 			time.Sleep(sleepTime)
@@ -98,6 +102,10 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 }
 
 func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, s *store.Store) {
+	defer func() {
+		totalRequests++
+		log.Printf("Total requests: %d\n", totalRequests)
+	}()
 	var msgData map[string]interface{}
 	if err := json.Unmarshal([]byte(*message.Body), &msgData); err != nil {
 		log.Println("Error decoding JSON message:", err)
