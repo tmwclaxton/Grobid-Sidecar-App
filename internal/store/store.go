@@ -34,14 +34,14 @@ type Paper struct {
 }
 
 type Section struct {
-	ID        int64  `json:"id"`
-	PaperID   int64  `json:"paper_id"`
-	Order     int64  `json:"order"`
-	Header    string `json:"header"`
-	Text      string `json:"text"`
-	Embedding string `json:"embedding"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        int64   `json:"id"`
+	PaperID   int64   `json:"paper_id"`
+	Order     int64   `json:"order"`
+	Header    string  `json:"header"`
+	Text      string  `json:"text"`
+	Embedding *string `json:"embedding,omitempty"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
 }
 
 type Screen struct {
@@ -206,7 +206,14 @@ func (store *Store) GetNextSectionOrder(paperID int64) (int, interface{}) {
 
 func (store *Store) CreateSection(paperID int64, header string, text string, order int) (interface{}, interface{}) {
 	var section Section
-	_, err := store.db.Exec("INSERT INTO sections (paper_id, header, text, `order`, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", paperID, header, text, order, carbon.Now().DateTimeString(), carbon.Now().DateTimeString())
+	// check if section already exists
+	section, err := store.FindSectionByHeaderAndText(paperID, header, text)
+	if section.ID != 0 {
+		log.Printf("Section already exists: %v\n", section.ID)
+		return section, nil
+	}
+
+	_, err = store.db.Exec("INSERT INTO sections (paper_id, header, text, `order`, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", paperID, header, text, order, carbon.Now().DateTimeString(), carbon.Now().DateTimeString())
 	if err != nil {
 		return section, err
 	}
@@ -222,5 +229,22 @@ func (store *Store) FindSectionByPaperAndPosition(paperID int64, position int) (
 	if err != nil {
 		return Section{}, err
 	}
+	return section, nil
+}
+
+func (store *Store) FindSectionByHeaderAndText(paperID int64, header string, text string) (Section, interface{}) {
+	var section Section
+	err := store.db.QueryRow("SELECT * FROM sections WHERE paper_id = ? AND header = ? AND text = ?", paperID, header, text).Scan(&section.ID, &section.PaperID, &section.Order, &section.Header, &section.Text, &section.Embedding, &section.CreatedAt, &section.UpdatedAt)
+	if err != nil {
+		log.Printf("Error finding section by header and text: %v\n", err)
+		return Section{}, err
+	}
+
+	if section.ID == 0 {
+		log.Printf("Section not found: %v\n", section.ID)
+		return Section{}, nil
+	}
+
+	log.Printf("Section found: %v\n", section.ID)
 	return section, nil
 }

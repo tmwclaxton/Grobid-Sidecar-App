@@ -193,8 +193,8 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	}
 
 	for _, section := range sections {
-		log.Printf("Section: %s\n", section.Header)
-		log.Printf("Text: %s\n", section.Text)
+		//log.Printf("Section: %s\n", section.Header)
+		//log.Printf("Text: %s\n", section.Text)
 		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
 		if err != nil {
 			return
