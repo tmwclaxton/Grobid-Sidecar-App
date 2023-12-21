@@ -19,9 +19,6 @@ import (
 	"time"
 )
 
-// DOIRegex is the regular expression for extracting DOIs
-//var DOIRegex = regexp.MustCompile(`\b(10[.][0-9]{3,}(?:[.][0-9]+)*/(?:(?!["&\'])\S)+)\b`)
-
 // CrudeGrobidResponse represents the structure of the Grobid service response.
 type CrudeGrobidResponse struct {
 	Raw      string       `xml:",innerxml"`
@@ -176,7 +173,6 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	//log.Printf("Crude IDNOs: %s\n", crudeResponse.IDNOs[1].RawContent)
 
 	tidyResponse.Doi = GetDOIFromString(crudeResponse.IDNOs[1].RawContent)
-	log.Printf("Tidy doi: %s\n", tidyResponse.Doi)
 	tidyResponse.Keywords = crudeResponse.Keywords.Term
 
 	// if keywords are empty, try to extract them from raw content
@@ -185,24 +181,17 @@ func TidyUpGrobidResponse(crudeResponse *CrudeGrobidResponse) (*TidyGrobidRespon
 	}
 
 	tidyResponse.Title = crudeResponse.Title
-	//log.Println("Crude date:", crudeResponse.Date)
 	tidyResponse.Date = crudeResponse.Date
-	//log.Println("Tidy date:", tidyResponse.Date)
-	//tidyResponse.Year
 	if tidyResponse.Date != "" {
-		// convert 4 July 2020  to 2020
+		// Hopefully the date is in this format  4 July 2020
 		tidyResponse.Year = tidyResponse.Date[len(tidyResponse.Date)-4:]
-		//tidyResponse.Year = carbon.NewCarbon(strings.TrimSpace(tidyResponse.Year)).ToYearString()
-		//log.Println("Year:", tidyResponse.Year)
 	}
 	tidyResponse.Abstract = crudeResponse.Abstract
 	for _, section := range crudeResponse.Sections {
 		tidyResponse.Sections = append(tidyResponse.Sections, section)
-		//log.Printf("Section: %s\n", section.Head)
 	}
 	for _, author := range crudeResponse.Authors {
 		tidyResponse.Authors = append(tidyResponse.Authors, author)
-		//log.Printf("Author: %s\n", author.RawContent)
 	}
 	return &tidyResponse, nil
 }

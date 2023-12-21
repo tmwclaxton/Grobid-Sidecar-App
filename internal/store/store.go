@@ -66,8 +66,10 @@ func (store *Store) GetDB() *sql.DB {
 
 func (store *Store) FindDOIFromPaperRepository(pdfdto *parsing.PDFDTO, screenID int64) {
 	paper, err := store.FindPaperByTitleAndAbstract(screenID, pdfdto.Title, pdfdto.Abstract)
-	if err != nil || paper.ID == 0 {
+	if err != nil {
 		log.Println("Error finding paper by title and abstract:", err)
+	} else if paper.ID == 0 {
+		log.Println("Paper not found by title and abstract")
 	} else {
 		log.Printf("Found paper by title and abstract: %v\n", paper.ID)
 		pdfdto.DOI = *paper.DOI
@@ -75,8 +77,10 @@ func (store *Store) FindDOIFromPaperRepository(pdfdto *parsing.PDFDTO, screenID 
 
 	if pdfdto.DOI == "" {
 		paper, err = store.FindPaperByTitle(screenID, pdfdto.Title)
-		if err != nil || paper.ID == 0 {
+		if err != nil {
 			log.Println("Error finding paper by title:", err)
+		} else if paper.ID == 0 {
+			log.Println("Paper not found by title")
 		} else {
 			log.Printf("Found paper by title: %v\n", paper.ID)
 			pdfdto.DOI = *paper.DOI
@@ -122,7 +126,6 @@ func (store *Store) FindPaperByTitleAndAbstract(screenID int64, title string, ab
 	}
 
 	if len(papers) > 1 {
-		// log this
 		log.Printf("Multiple papers found with the same title and abstract.")
 		for _, paper := range papers {
 			log.Printf("Paper id: %v\n", paper.ID)
@@ -164,7 +167,7 @@ func (store *Store) FindPaperByTitle(screenID int64, title string) (Paper, error
 	return papers[0], nil
 }
 
-func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, interface{}) {
+func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, error) {
 	var paper Paper
 	err := store.db.QueryRow("SELECT * FROM papers WHERE screen_id = ? AND doi = ?", id, doi).Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.CreatedAt, &paper.UpdatedAt)
 	if err != nil {
@@ -205,11 +208,17 @@ func (store *Store) GetNextSectionOrder(paperID int64) (int, interface{}) {
 }
 
 func (store *Store) CreateSection(paperID int64, header string, text string, order int) (interface{}, interface{}) {
+
+	// validate inputs
+	if paperID == 0 || header == "" || text == "" {
+		return nil, errors.New("missing required fields")
+	}
+
 	var section Section
 	// check if section already exists
 	section, err := store.FindSectionByHeaderAndText(paperID, header, text)
 	if section.ID != 0 {
-		log.Printf("Section already exists: %v\n", section.ID)
+		//log.Printf("Section already exists: %v\n", section.ID)
 		return section, nil
 	}
 
@@ -236,15 +245,15 @@ func (store *Store) FindSectionByHeaderAndText(paperID int64, header string, tex
 	var section Section
 	err := store.db.QueryRow("SELECT * FROM sections WHERE paper_id = ? AND header = ? AND text = ?", paperID, header, text).Scan(&section.ID, &section.PaperID, &section.Order, &section.Header, &section.Text, &section.Embedding, &section.CreatedAt, &section.UpdatedAt)
 	if err != nil {
-		log.Printf("Error finding section by header and text: %v\n", err)
+		//log.Printf("Error finding section by header and text: %v\n", err)
 		return Section{}, err
 	}
 
 	if section.ID == 0 {
-		log.Printf("Section not found: %v\n", section.ID)
+		//log.Printf("Section not found: %v\n", section.ID)
 		return Section{}, nil
 	}
 
-	log.Printf("Section found: %v\n", section.ID)
+	//log.Printf("Section found: %v\n", section.ID)
 	return section, nil
 }

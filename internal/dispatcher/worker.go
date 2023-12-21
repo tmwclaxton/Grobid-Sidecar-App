@@ -130,33 +130,40 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	if pdfDTO.DOI == "" {
 		s.FindDOIFromPaperRepository(pdfDTO, screenID)
 	}
-	//log.Printf("DOI: %s\n", pdfDTO.DOI)
 
+	// ---- Paper ----
 	var paper store.Paper
+
+	// check if paper already exists
 	paperAlreadyExists := false
 	if pdfDTO.DOI != "" {
 		log.Println("Finding paper by DOI...")
-		paper, _ = s.FindPaperByDOI(screenID, pdfDTO.DOI)
+		paper, err = s.FindPaperByDOI(screenID, pdfDTO.DOI)
 	} else if pdfDTO.Title != "" && pdfDTO.Abstract != "" {
 		log.Println("Finding paper by title and abstract...")
-		paper, _ = s.FindPaperByTitleAndAbstract(screenID, pdfDTO.Title, pdfDTO.Abstract)
+		paper, err = s.FindPaperByTitleAndAbstract(screenID, pdfDTO.Title, pdfDTO.Abstract)
 	} else if pdfDTO.Title != "" {
 		log.Println("Finding paper by title...")
-		paper, _ = s.FindPaperByTitle(screenID, pdfDTO.Title)
+		paper, err = s.FindPaperByTitle(screenID, pdfDTO.Title)
 	}
-	//log.Printf("DOI: %s\n", pdfDTO.DOI)
 
+	if err != nil {
+		log.Println("NON-FATAL: Couldn't find paper:", err)
+	}
+
+	// if paper does not exist, create it
 	if paper.ID == 0 {
 		paper, err = s.CreatePaper(pdfDTO, userID, screenID)
 		if err != nil {
 			log.Println("Error creating paper:", err)
+			return
+		} else {
+			log.Printf("Created paper: %v\n", paper.ID)
 		}
 	} else {
+		log.Printf("Found paper: %v\n", paper.ID)
 		paperAlreadyExists = true
 	}
-
-	log.Printf("Paper exists: %v\n", paperAlreadyExists)
-	log.Printf("Paper ID: %v\n", paper.ID)
 
 	// ---- Sections ----
 	// get sections and headings from $dto
@@ -197,10 +204,13 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		//log.Printf("Text: %s\n", section.Text)
 		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
 		if err != nil {
+			log.Println("Error creating section:", err)
+			log.Printf("Paper ID: %d, Header: %s, Text: %s, Order: %d\n", paper.ID, section.Header, section.Text, order)
 			return
 		}
 		order++
 	}
+	log.Printf("Sections iterated: %d\n", len(sections))
 
 	lastRequestTimeMu.Lock()
 	lastRequestTime = time.Now()
@@ -230,4 +240,6 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 			Key:    aws.String(path),
 		})
 	}
+
+	log.Printf("Worker %d finished processing message\n", id)
 }
