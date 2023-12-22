@@ -122,7 +122,7 @@ func SendPDF2Grobid(fileContent []byte) (*CrudeGrobidResponse, error) {
 	}
 
 	// Add other form fields
-	err = writer.WriteField("consolidateHeader", "true")
+	err = writer.WriteField("consolidateHeader", "1")
 	if err != nil {
 		return nil, err
 	}
