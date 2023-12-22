@@ -148,7 +148,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		log.Println("Error sending file to Grobid service:", err)
 
 		// if err contains connect: connection refused kill entire go app
-		if strings.Contains(err.Error(), "connect: connection refused") {
+		if strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "server misbehaving") || strings.Contains(err.Error(), "host not found") {
 			log.Println("Grobid service is down, killing app...")
 			os.Exit(1)
 		}
