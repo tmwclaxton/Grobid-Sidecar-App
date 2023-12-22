@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: "eu-west-2"                  # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: "rapidresearch-production-ecr-repository"           # set this to your Amazon ECR repository name
+  ECR_REPOSITORY: "rapidresearch-production-grobid-ecr-repository"           # set this to your Amazon ECR repository name
   ECS_SERVICE: "grobid-service"                 # set this to your Amazon ECS service name
   ECS_CLUSTER: "rapidresearch-ecs-cluster"                 # set this to your Amazon ECS cluster name
   CONTAINER_NAME: "laravel-app-container-production"           # set this to the name of the container in the
@@ -45,28 +45,28 @@ jobs:
         run: |
           export WWWUSER=${WWWUSER:-$UID}
           export WWWGROUP=${WWWGROUP:-$(id -g)}
-          docker-compose -f docker-compose-prod.yml build
-          docker tag rapidresearch/app ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+          docker-compose -f docker-compose.yaml build
+          docker tag grobid/app ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Download task definition
-        id: task-def-download
-        run: |
-          aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION }} --query taskDefinition > task-definition.json
-
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
-        with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: false
+#
+#      - name: Download task definition
+#        id: task-def-download
+#        run: |
+#          aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION }} --query taskDefinition > task-definition.json
+#
+#      - name: Fill in the new image ID in the Amazon ECS task definition
+#        id: task-def
+#        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+#        with:
+#          task-definition: task-definition.json
+#          container-name: ${{ env.CONTAINER_NAME }}
+#          image: ${{ steps.build-image.outputs.image }}
+#
+#      - name: Deploy Amazon ECS task definition
+#        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+#        with:
+#          task-definition: ${{ steps.task-def.outputs.task-definition }}
+#          service: ${{ env.ECS_SERVICE }}
+#          cluster: ${{ env.ECS_CLUSTER }}
+#          wait-for-service-stability: false
