@@ -26,7 +26,7 @@ import (
 var (
 	lastRequestTime   time.Time
 	lastRequestTimeMu sync.Mutex
-	totalRequests     int
+	totalRequests     = 0
 	grobidSemaphore   = semaphore.NewWeighted(1)
 )
 
@@ -42,9 +42,6 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 
 	for {
 		message := <-messageQueue
-		lastRequestTimeMu.Lock()
-		timeSinceLastRequest := time.Since(lastRequestTime)
-		lastRequestTimeMu.Unlock()
 
 		if totalRequests < gracePeriodRequests {
 			// Acquire a semaphore before accessing
@@ -52,6 +49,9 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 				log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
 				return
 			}
+			lastRequestTimeMu.Lock()
+			timeSinceLastRequest := time.Since(lastRequestTime)
+			lastRequestTimeMu.Unlock()
 			log.Printf("Worker %d acquired semaphore\n", id)
 
 			// If the time since the last request is less than the minimum gap between requests, sleep for the difference
