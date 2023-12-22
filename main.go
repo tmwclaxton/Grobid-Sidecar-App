@@ -93,7 +93,8 @@ func main() {
 	go func() {
 		parsing.CheckGrobidHealth(&healthStatus, &healthMutex, workFunc)
 		for {
-			time.Sleep(5 * time.Minute) // Adjust the interval as needed
+			// this is backup if server doesn't shutdown on bad response
+			time.Sleep(1 * time.Minute) // Adjust the interval as needed
 			parsing.CheckGrobidHealth(&healthStatus, &healthMutex)
 		}
 	}()
