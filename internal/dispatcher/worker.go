@@ -46,25 +46,27 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 		timeSinceLastRequest := time.Since(lastRequestTime)
 		lastRequestTimeMu.Unlock()
 
-		// Acquire a semaphore before accessing the critical section
-		if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
-			log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
-			return
-		}
-		log.Printf("Worker %d acquired semaphore\n", id)
+		if totalRequests < gracePeriodRequests {
+			// Acquire a semaphore before accessing
+			if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
+				log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
+				return
+			}
+			log.Printf("Worker %d acquired semaphore\n", id)
 
-		// If the time since the last request is less than the minimum gap between requests, sleep for the difference
-		if timeSinceLastRequest < minGapBetweenRequests || totalRequests < gracePeriodRequests {
-			sleepTime := minGapBetweenRequests - timeSinceLastRequest
-			log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
-			time.Sleep(sleepTime)
-		}
-		lastRequestTimeMu.Lock()
-		lastRequestTime = time.Now()
-		lastRequestTimeMu.Unlock()
-		grobidSemaphore.Release(1) // Release the semaphore when the function exits
+			// If the time since the last request is less than the minimum gap between requests, sleep for the difference
+			if timeSinceLastRequest < minGapBetweenRequests {
+				sleepTime := minGapBetweenRequests - timeSinceLastRequest
+				log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
+				time.Sleep(sleepTime)
+			}
+			lastRequestTimeMu.Lock()
+			lastRequestTime = time.Now()
+			lastRequestTimeMu.Unlock()
+			grobidSemaphore.Release(1) // Release the semaphore when the function exits
 
-		log.Printf("Worker %d releasing semaphore\n", id)
+			log.Printf("Worker %d releasing semaphore\n", id)
+		}
 
 		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
 	}
