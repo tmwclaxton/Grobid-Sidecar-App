@@ -45,8 +45,8 @@ jobs:
         run: |
           export WWWUSER=${WWWUSER:-$UID}
           export WWWGROUP=${WWWGROUP:-$(id -g)}
-          docker-compose -f docker-compose.yaml build
-          docker tag grobid/app ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+          docker-compose -f docker-compose-prod.yaml build
+          docker tag go-helper ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 #

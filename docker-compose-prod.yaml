@@ -30,20 +30,6 @@ services:
       # https://code.visualstudio.com/docs/remote/containers-advanced#_avoiding-extension-reinstalls-on-container-rebuild
       - vscode-extensions:/home/development/.vscode-server/extensions
       - vscode-extensions-insiders:/home/development/.vscode-server-insiders/extensions
-
-    depends_on:
-      - grobid
-  grobid:
-    container_name: grobid-service
-    image: lfoppiano/grobid:0.7.2
-    ports:
-      - "8070:8070"
-    volumes:
-      - ./grobid-home:/grobid-home
-    environment:
-      - GROBID_VERSION=0.6.1
-      - GROBID_HOME=/grobid-home
-      - JAVA_OPTS=-Xmx4G
 volumes:
   go-pkg:
   workdir-api-tmp:
