@@ -129,7 +129,8 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	}
 
 	path := msgData["s3Location"].(string)
-	userID := msgData["user_id"].(string)
+	userIDTemp := msgData["user_id"].(string)
+	userID, err := strconv.ParseInt(userIDTemp, 10, 64)
 	screenIDTemp := msgData["screen_id"].(string)
 	screenID, err := strconv.ParseInt(screenIDTemp, 10, 64)
 

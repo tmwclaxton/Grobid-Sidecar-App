@@ -177,10 +177,10 @@ func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, error) {
 	return paper, nil
 }
 
-func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID string, screenID int64) (Paper, error) {
+func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID int64, screenID int64) (Paper, error) {
 
 	// if doi, user_id, screen_id, title, abstract, year, doi are missing, return error
-	if dto.DOI == "" || userID == "" || screenID == 0 || dto.Title == "" || dto.Abstract == "" || dto.Year == "" {
+	if userID == 0 || screenID == 0 || dto.Title == "" || dto.Abstract == "" || dto.Year == "" {
 		return Paper{}, errors.New("missing required fields")
 	}
 

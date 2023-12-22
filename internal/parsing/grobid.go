@@ -5,6 +5,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"simple-go-app/internal/helpers"
+	"strconv"
+	"time"
 
 	//"github.com/uniplaces/carbon"
 	"io"
@@ -13,10 +15,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 // CrudeGrobidResponse represents the structure of the Grobid service response.
@@ -64,6 +64,13 @@ type AuthorsRaw struct {
 }
 
 func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()) {
+	fmt.Printf("Waiting %s seconds before starting up sidecar...\n", helpers.GetEnvVariable("START_DELAY_SECONDS"))
+	// Introduce a 15-second delay before updating healthStatus to true
+	startDelay := helpers.GetEnvVariable("START_DELAY_SECONDS")
+	// Convert the startDelay string to an int
+	startDelayInt, _ := strconv.Atoi(startDelay)
+	time.Sleep(time.Duration(startDelayInt) * time.Second)
+
 	log.Println("Checking Grobid health...")
 	healthMutex.Lock()
 	healthMutex.Unlock()
@@ -89,12 +96,6 @@ func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()
 	isHealthy := resp.StatusCode >= 200 && resp.StatusCode < 300
 
 	if isHealthy {
-		fmt.Printf("Waiting %s seconds before starting workers...\n", helpers.GetEnvVariable("START_DELAY_SECONDS"))
-		// Introduce a 15-second delay before updating healthStatus to true
-		startDelay := helpers.GetEnvVariable("START_DELAY_SECONDS")
-		// Convert the startDelay string to an int
-		startDelayInt, _ := strconv.Atoi(startDelay)
-		time.Sleep(time.Duration(startDelayInt) * time.Second)
 		// start up workers
 		if len(fn) > 0 {
 			fn[0]()
