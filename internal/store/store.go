@@ -179,9 +179,9 @@ func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, error) {
 
 func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID string, screenID int64) (Paper, error) {
 
-	// if doi, user_id, screen_id, title, abstract, year, doi are missing, return error
-	if dto.DOI == "" || userID == "" || screenID == 0 || dto.Title == "" || dto.Abstract == "" || dto.Year == "" {
-		return Paper{}, errors.New("missing required fields")
+	// if user_id, screen_id, title, abstract are missing, return error
+	if userID == "" || screenID == 0 || dto.Title == "" || dto.Abstract == "" {
+		return Paper{}, errors.New("CreatePaper: missing required fields")
 	}
 
 	// create slug
@@ -211,7 +211,7 @@ func (store *Store) CreateSection(paperID int64, header string, text string, ord
 
 	// validate inputs
 	if paperID == 0 || header == "" || text == "" {
-		return nil, errors.New("missing required fields")
+		return nil, errors.New("CreateSection: missing required fields")
 	}
 
 	var section Section

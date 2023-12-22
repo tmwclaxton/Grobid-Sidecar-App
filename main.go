@@ -33,6 +33,10 @@ func main() {
 	helpers.LoadEnv()
 	log.Println("app env: " + helpers.GetEnvVariable("APP_ENV"))
 
+	// log.Println("totalRequests before: " + strconv.Itoa(dispatcher.totalRequests))
+	// totalRequests = 0
+	// log.Println("totalRequests after: " + strconv.Itoa(dispatcher.totalRequests))
+
 	// Get environment variables
 	sqsPrefix := helpers.GetEnvVariable("SQS_PREFIX")
 	requestsQueueName := helpers.GetEnvVariable("REQUESTS_QUEUE")
