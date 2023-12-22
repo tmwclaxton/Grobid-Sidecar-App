@@ -1674,3 +1674,4 @@
 /vendor/golang.org/x/sync/LICENSE
 /vendor/golang.org/x/sync/PATENTS
 /vendor/golang.org/x/sync/semaphore/semaphore.go
+/.idea/
