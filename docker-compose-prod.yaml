@@ -1,11 +1,11 @@
 version: "3"
 
 services:
-  go-helper:
-    container_name: go-helper
+  grobids-friend:
+    container_name: grobids-friend
     build:
       context: .
-    image: go-helper/app
+    image: grobids-friend:latest
     ports:
       - "591:8080"
     working_dir: &PROJECT_ROOT_DIR /app
