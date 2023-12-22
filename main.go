@@ -31,6 +31,7 @@ var (
 func main() {
 	// Load environment variables
 	helpers.LoadEnv()
+	log.Println("app env: " + helpers.GetEnvVariable("APP_ENV"))
 
 	// Get environment variables
 	sqsPrefix := helpers.GetEnvVariable("SQS_PREFIX")
