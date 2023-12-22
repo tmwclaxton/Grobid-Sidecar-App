@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"simple-go-app/internal/helpers"
 	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
@@ -148,7 +149,8 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 
 		// if err contains connect: connection refused kill entire go app
 		if strings.Contains(err.Error(), "connect: connection refused") {
-			panic(err)
+			log.Println("Grobid service is down, killing app...")
+			os.Exit(1)
 		}
 
 		return
