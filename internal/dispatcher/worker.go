@@ -260,7 +260,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	}
 	log.Printf("Sections iterated: %d\n", len(sections))
 
-	if helpers.GetEnvVariable("APP_ENV") != "production" {
+	if helpers.GetEnvVariable("REQUEUE_REQUESTS") == "true" {
 		_, err = svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
 			QueueUrl:          aws.String(sqsURL),
 			ReceiptHandle:     message.ReceiptHandle,
