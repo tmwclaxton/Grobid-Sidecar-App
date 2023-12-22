@@ -148,6 +148,12 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	CrudeGrobidResponse, err := parsing.SendPDF2Grobid(fileContent)
 	if err != nil {
 		log.Println("Error sending file to Grobid service:", err)
+
+		// if err contains connect: connection refused kill entire go app
+		if strings.Contains(err.Error(), "connect: connection refused") {
+			panic(err)
+		}
+
 		return
 	}
 
