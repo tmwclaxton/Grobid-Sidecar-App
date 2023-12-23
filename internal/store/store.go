@@ -177,11 +177,12 @@ func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, error) {
 	return paper, nil
 }
 
-func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID string, screenID int64) (Paper, error) {
+func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID int64, screenID int64) (Paper, error) {
 
 	// if user_id, screen_id, title, abstract are missing, return error
-	if userID == "" || screenID == 0 || dto.Title == "" || dto.Abstract == "" {
+	if userID == 0 || screenID == 0 || dto.Title == "" || dto.Abstract == "" {
 		return Paper{}, errors.New("CreatePaper: missing required fields")
+
 	}
 
 	// create slug
