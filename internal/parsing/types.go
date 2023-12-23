@@ -22,9 +22,8 @@ type PDFDTO struct {
 
 // create a PDFDTO
 func CreatePDFDTO(tidyGrobidResponse *TidyGrobidResponse, tidyCrossRefResponse *TidyCrossRefResponse) *PDFDTO {
-	
+
 	if tidyCrossRefResponse != nil {
-		return nil
 		// prefer crossref data for title, abstract, year
 		if tidyCrossRefResponse.Title != "" {
 			log.Println("Using crossref title")

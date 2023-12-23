@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"golang.org/x/sync/semaphore"	
+	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -165,7 +165,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		return
 	}
 
-	crossRefResponse:= TidyCrossRefResponse{}
+	crossRefResponse := &parsing.TidyCrossRefResponse{}
 	// cross reference data using the DOI
 	if tidyGrobidResponse.Doi != "" {
 		crossRefResponse, err = parsing.CrossReferenceData(tidyGrobidResponse.Doi)
