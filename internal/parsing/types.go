@@ -22,19 +22,22 @@ type PDFDTO struct {
 
 // create a PDFDTO
 func CreatePDFDTO(tidyGrobidResponse *TidyGrobidResponse, tidyCrossRefResponse *TidyCrossRefResponse) *PDFDTO {
-	// prefer crossref data for title, abstract, year
-	if tidyCrossRefResponse.Title != "" {
-		log.Println("Using crossref title")
-		tidyGrobidResponse.Title = tidyCrossRefResponse.Title
-	}
-	if tidyCrossRefResponse.Abstract != "" {
-		// I do not have much faith in this
-		log.Println("Using crossref abstract")
-		tidyGrobidResponse.Abstract = tidyCrossRefResponse.Abstract
-	}
-	if tidyCrossRefResponse.Year != "" {
-		log.Println("Using crossref year")
-		tidyGrobidResponse.Year = tidyCrossRefResponse.Year
+
+	if tidyCrossRefResponse != nil {
+		// prefer crossref data for title, abstract, year
+		if tidyCrossRefResponse.Title != "" {
+			log.Println("Using crossref title")
+			tidyGrobidResponse.Title = tidyCrossRefResponse.Title
+		}
+		if tidyCrossRefResponse.Abstract != "" {
+			// I do not have much faith in this
+			log.Println("Using crossref abstract")
+			tidyGrobidResponse.Abstract = tidyCrossRefResponse.Abstract
+		}
+		if tidyCrossRefResponse.Year != "" {
+			log.Println("Using crossref year")
+			tidyGrobidResponse.Year = tidyCrossRefResponse.Year
+		}
 	}
 
 	// trim title and replace '-' with ' '

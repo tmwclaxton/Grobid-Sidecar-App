@@ -134,7 +134,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	screenIDTemp := msgData["screen_id"].(string)
 	screenID, err := strconv.ParseInt(screenIDTemp, 10, 64)
 
-	fmt.Printf("Worker %d received message. Path: %s. User ID: %s. Screen ID: %s\n", id, path, userID, screenID)
+	fmt.Printf("Worker %d received message. Path: %s. User ID: %s. Screen ID: %s\n", id, path, userID, screenIDTemp)
 
 	sess := createAWSSession(awsRegion)
 	s3Svc := s3.New(sess)
@@ -166,11 +166,14 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		return
 	}
 
+	crossRefResponse := &parsing.TidyCrossRefResponse{}
 	// cross reference data using the DOI
-	crossRefResponse, err := parsing.CrossReferenceData(tidyGrobidResponse.Doi)
-	if err != nil {
-		log.Println("Error cross referencing data:", err)
-		return
+	if tidyGrobidResponse.Doi != "" {
+		crossRefResponse, err = parsing.CrossReferenceData(tidyGrobidResponse.Doi)
+		if err != nil {
+			log.Println("Error cross referencing data:", err)
+			return
+		}
 	}
 
 	// create a PDFDTO
