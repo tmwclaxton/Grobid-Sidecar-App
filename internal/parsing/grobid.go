@@ -74,9 +74,7 @@ func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()
 	log.Println("Checking Grobid health...")
 	healthMutex.Lock()
 	healthMutex.Unlock()
-	grobidHostname := "grobid"
-	grobidPort := "8070"
-	GrobidURL := fmt.Sprintf("http://%s:%s", grobidHostname, grobidPort)
+	GrobidURL := helpers.GetEnvVariable("GROBID_URL")
 	healthEndpoint := "/api/isalive"
 	// Attempt to make a GET request to the Grobid health endpoint
 	resp, err := http.Get(GrobidURL + healthEndpoint)
@@ -134,8 +132,9 @@ func SendPDF2Grobid(fileContent []byte) (*CrudeGrobidResponse, error) {
 		return nil, err
 	}
 
+	GrobidURL := helpers.GetEnvVariable("GROBID_URL")
 	// Make a POST request to the Grobid service endpoint
-	resp, err := http.Post("http://grobid:8070/api/processFulltextDocument", writer.FormDataContentType(), &requestBody)
+	resp, err := http.Post(GrobidURL+"/api/processFulltextDocument", writer.FormDataContentType(), &requestBody)
 	if err != nil {
 		return nil, err
 	}
