@@ -5,9 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"simple-go-app/internal/helpers"
-	"strconv"
-	"time"
-
 	//"github.com/uniplaces/carbon"
 	"io"
 	"io/ioutil"
@@ -64,14 +61,7 @@ type AuthorsRaw struct {
 }
 
 func CheckGrobidHealth(healthStatus *bool, healthMutex *sync.Mutex, fn ...func()) {
-	fmt.Printf("Waiting %s seconds before starting up sidecar...\n", helpers.GetEnvVariable("START_DELAY_SECONDS"))
-	// Introduce a 15-second delay before updating healthStatus to true
-	startDelay := helpers.GetEnvVariable("START_DELAY_SECONDS")
-	// Convert the startDelay string to an int
-	startDelayInt, _ := strconv.Atoi(startDelay)
-	time.Sleep(time.Duration(startDelayInt) * time.Second)
-
-	log.Println("Checking Grobid health...")
+	fmt.Println("Periodic health check")
 	healthMutex.Lock()
 	healthMutex.Unlock()
 	GrobidURL := helpers.GetEnvVariable("GROBID_URL")

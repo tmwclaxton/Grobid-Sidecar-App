@@ -92,6 +92,12 @@ func main() {
 
 	// Start a timer for periodic health checks
 	go func() {
+		// Introduce a 15-second delay before updating healthStatus to true
+		startDelay := helpers.GetEnvVariable("START_DELAY_SECONDS")
+		// Convert the startDelay string to an int
+		startDelayInt, _ := strconv.Atoi(startDelay)
+		time.Sleep(time.Duration(startDelayInt) * time.Second)
+
 		parsing.CheckGrobidHealth(&healthStatus, &healthMutex, workFunc)
 		for {
 			// this is backup if server doesn't shutdown on bad response
