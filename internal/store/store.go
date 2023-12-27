@@ -128,7 +128,7 @@ func (store *Store) FindPaperByTitleAndAbstract(screenID int64, title string, ab
 	}
 
 	if len(papers) > 1 {
-		log.Printf("Multiple papers found with the same title and abstract.")
+		logging.InfoLogger.Println("Multiple papers found with the same title and abstract.")
 		for _, paper := range papers {
 			log.Printf("Paper id: %v\n", paper.ID)
 		}
@@ -161,7 +161,7 @@ func (store *Store) FindPaperByTitle(screenID int64, title string) (Paper, error
 
 	if len(papers) > 1 {
 		// log this
-		log.Printf("Multiple papers found with the same title.")
+		logging.InfoLogger.Println("Multiple papers found with the same title.")
 		for _, paper := range papers {
 			log.Printf("Paper id: %v\n", paper.ID)
 		}
@@ -181,9 +181,14 @@ func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, error) {
 
 func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID int64, screenID int64) (Paper, error) {
 
-	// if user_id, screen_id, title, abstract are missing, return error
-	if userID == 0 || screenID == 0 || dto.Title == "" || dto.Abstract == "" {
+	// if user_id, screen_id, return error
+	if userID == 0 || screenID == 0 {
 		return Paper{}, errors.New("CreatePaper: missing required fields: userID: " + strconv.FormatInt(userID, 10) + ", screenID: " + strconv.FormatInt(screenID, 10) + ", title: " + dto.Title + ", abstract: " + dto.Abstract)
+	}
+
+	// if dto.Title || dto.Abstract are missing, log it
+	if dto.Title == "" || dto.Abstract == "" {
+		logging.WarningLogger.Println("Title or Abstract empty - UserID: " + strconv.FormatInt(userID, 10) + ", ScreenID: " + strconv.FormatInt(screenID, 10) + ", Title: " + dto.Title + ", Abstract: " + dto.Abstract)
 	}
 
 	// create slug
@@ -213,7 +218,7 @@ func (store *Store) CreateSection(paperID int64, header string, text string, ord
 
 	// validate inputs
 	if header == "" {
-		logging.WarningLogger.Println("WARNING Header empty - PaperID: " + strconv.FormatInt(paperID, 10) + ", Header: " + header + ", Text: " + text)
+		logging.WarningLogger.Println("Header empty - PaperID: " + strconv.FormatInt(paperID, 10) + ", Header: " + header + ", Text: " + text)
 	}
 
 	if paperID == 0 || text == "" {

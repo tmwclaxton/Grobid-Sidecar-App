@@ -80,7 +80,7 @@ func TidyCrossRefData(crudeResponse *CrudeCrossRefResponse, AbstractTemp *Abstra
 		}
 	}
 
-	if abstract == "" {
+	if abstract != "" {
 		abstract = strings.TrimSpace(abstract)
 		re := regexp.MustCompile(`\s+`)
 		abstract = re.ReplaceAllString(abstract, " ")
