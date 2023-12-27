@@ -173,7 +173,6 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		crossRefResponse, err = parsing.CrossReferenceData(tidyGrobidResponse.Doi)
 		if err != nil {
 			log.Println("Error cross referencing data:", err)
-			return
 		}
 	}
 
