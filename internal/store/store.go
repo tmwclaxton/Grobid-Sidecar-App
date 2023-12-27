@@ -6,7 +6,9 @@ import (
 	"github.com/uniplaces/carbon"
 	"log"
 	"simple-go-app/internal/helpers"
+	"simple-go-app/internal/logging"
 	"simple-go-app/internal/parsing"
+	"strconv"
 )
 
 // Store is the concrete implementation of the Store interface of the mysql package
@@ -181,8 +183,7 @@ func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID int64, screenID int6
 
 	// if user_id, screen_id, title, abstract are missing, return error
 	if userID == 0 || screenID == 0 || dto.Title == "" || dto.Abstract == "" {
-		return Paper{}, errors.New("CreatePaper: missing required fields")
-
+		return Paper{}, errors.New("CreatePaper: missing required fields: userID: " + strconv.FormatInt(userID, 10) + ", screenID: " + strconv.FormatInt(screenID, 10) + ", title: " + dto.Title + ", abstract: " + dto.Abstract)
 	}
 
 	// create slug
@@ -211,8 +212,12 @@ func (store *Store) GetNextSectionOrder(paperID int64) (int, interface{}) {
 func (store *Store) CreateSection(paperID int64, header string, text string, order int) (interface{}, interface{}) {
 
 	// validate inputs
-	if paperID == 0 || header == "" || text == "" {
-		return nil, errors.New("CreateSection: missing required fields")
+	if header == "" {
+		logging.WarningLogger.Println("WARNING Header empty - PaperID: " + strconv.FormatInt(paperID, 10) + ", Header: " + header + ", Text: " + text)
+	}
+
+	if paperID == 0 || text == "" {
+		return nil, errors.New("CreateSection: missing required fields: paperID: " + strconv.FormatInt(paperID, 10) + ", header: " + header + ", text: " + text)
 	}
 
 	var section Section

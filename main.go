@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"simple-go-app/internal/helpers"
+	"simple-go-app/internal/logging"
 	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
 	"strconv"
@@ -31,8 +32,7 @@ var (
 func main() {
 	// Load environment variables
 	helpers.LoadEnv()
-	log.Println("app env: " + helpers.GetEnvVariable("APP_ENV"))
-
+	logging.InfoLogger.Println("app env: " + helpers.GetEnvVariable("APP_ENV"))
 	// Get environment variables
 	sqsPrefix := helpers.GetEnvVariable("SQS_PREFIX")
 	requestsQueueName := helpers.GetEnvVariable("REQUESTS_QUEUE")
@@ -47,13 +47,13 @@ func main() {
 	dbUser := helpers.GetEnvVariable("DB_USERNAME")
 	dbPassword := helpers.GetEnvVariable("DB_PASSWORD")
 	dbName := helpers.GetEnvVariable("DB_DATABASE")
-	log.Println("Environment variables loaded successfully.")
-
+	logging.InfoLogger.Println("Environment variables loaded successfully.")
 	// Set up mysql connection
-	log.Printf("Database connection string: %s\n", dbUser+":"+dbPassword+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
+	logging.InfoLogger.Println("Database connection string: " + dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName)
+
 	db, err := sql.Open("mysql", dbUser+":"+dbPassword+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
 	if err != nil {
-		log.Fatal("Error opening database:", err)
+		logging.ErrorLogger.Println("Error opening database:", err)
 	}
 	s := store.New(db)
 	// ping database

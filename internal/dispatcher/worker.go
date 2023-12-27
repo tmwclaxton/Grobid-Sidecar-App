@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"simple-go-app/internal/helpers"
+	"simple-go-app/internal/logging"
 	"simple-go-app/internal/parsing"
 	"simple-go-app/internal/store"
 	"strconv"
@@ -256,8 +257,7 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		//log.Printf("Text: %s\n", section.Text)
 		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
 		if err != nil {
-			log.Println("Error creating section:", err)
-			log.Printf("Paper ID: %d, Header: %s, Text: %s, Order: %d\n", paper.ID, section.Header, section.Text, order)
+			logging.ErrorLogger.Println(err)
 			return
 		}
 		order++
