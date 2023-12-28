@@ -60,12 +60,12 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 				lastRequestTimeMu.Lock()
 				timeSinceLastRequest := time.Since(lastRequestTime)
 				lastRequestTimeMu.Unlock()
-				log.Printf("Worker %d acquired semaphore\n", id)
+				//log.Printf("Worker %d acquired semaphore\n", id)
 
 				// If the time since the last request is less than the minimum gap between requests, sleep for the difference
 				if timeSinceLastRequest < minGapBetweenRequests {
 					sleepTime := minGapBetweenRequests - timeSinceLastRequest
-					log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
+					//log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
 					time.Sleep(sleepTime)
 				}
 				lastRequestTimeMu.Lock()
@@ -73,7 +73,7 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 				lastRequestTimeMu.Unlock()
 				grobidSemaphore.Release(1) // Release the semaphore when the function exits
 
-				log.Printf("Worker %d releasing semaphore\n", id)
+				//log.Printf("Worker %d releasing semaphore\n", id)
 			}
 		}
 
