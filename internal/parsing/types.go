@@ -42,6 +42,10 @@ func CreatePDFDTO(tidyGrobidResponse *TidyGrobidResponse, tidyCrossRefResponse *
 			log.Println("Using crossref ISSN")
 			tidyGrobidResponse.ISSN = tidyCrossRefResponse.ISSN
 		}
+		if tidyCrossRefResponse.DOI != "" {
+			log.Println("Using crossref DOI")
+			tidyGrobidResponse.Doi = tidyCrossRefResponse.DOI
+		}
 	}
 
 	// trim title and replace '-' with ' '

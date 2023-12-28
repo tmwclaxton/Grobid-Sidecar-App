@@ -56,7 +56,7 @@ func CrossRefDataDOI(doi string) (*TidyCrossRefResponse, error) {
 
 	response, err = client.Get("https://api.crossref.org/works/" + doi)
 	if err != nil {
-		return nil, err
+		return &TidyCrossRefResponse{}, err
 	}
 
 	defer func(Body io.ReadCloser) {
@@ -70,7 +70,7 @@ func CrossRefDataDOI(doi string) (*TidyCrossRefResponse, error) {
 	var crossRefResponse CrossRefDOIResponse
 	err = json.NewDecoder(response.Body).Decode(&crossRefResponse)
 	if err != nil {
-		return nil, err
+		return &TidyCrossRefResponse{}, err
 	}
 
 	// Extract data from the response
@@ -105,7 +105,7 @@ func CrossRefDataTitle(title string) (*TidyCrossRefResponse, error) {
 	// escape the url
 	url = strings.ReplaceAll(url, " ", "%20")
 
-	log.Printf("Crossref URL: %s\n", url)
+	//log.Printf("Crossref URL: %s\n", url)
 	response, err = client.Get(url)
 	if err != nil {
 		return nil, err
