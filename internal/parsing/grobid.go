@@ -39,6 +39,7 @@ type TidyGrobidResponse struct {
 	Authors  []AuthorsRaw `json:"authors"`
 	Journal  string       `json:"journal"`
 	Notes    string       `json:"notes"`
+	ISSN     string       `json:"issn"`
 }
 
 type IdnosRaw struct {

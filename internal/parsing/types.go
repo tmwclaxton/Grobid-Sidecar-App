@@ -38,6 +38,10 @@ func CreatePDFDTO(tidyGrobidResponse *TidyGrobidResponse, tidyCrossRefResponse *
 			log.Println("Using crossref year")
 			tidyGrobidResponse.Year = tidyCrossRefResponse.Year
 		}
+		if tidyCrossRefResponse.ISSN != "" {
+			log.Println("Using crossref ISSN")
+			tidyGrobidResponse.ISSN = tidyCrossRefResponse.ISSN
+		}
 	}
 
 	// trim title and replace '-' with ' '
@@ -50,6 +54,7 @@ func CreatePDFDTO(tidyGrobidResponse *TidyGrobidResponse, tidyCrossRefResponse *
 	return &PDFDTO{
 		Title:    tidyGrobidResponse.Title,
 		DOI:      tidyGrobidResponse.Doi,
+		ISSN:     tidyGrobidResponse.ISSN,
 		Abstract: tidyGrobidResponse.Abstract,
 		Sections: tidyGrobidResponse.Sections,
 		Keywords: tidyGrobidResponse.Keywords,
