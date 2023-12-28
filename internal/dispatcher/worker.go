@@ -38,13 +38,18 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 		log.Fatalf("Error parsing MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS: %v", err)
 	}
 	gracePeriodRequests, _ := strconv.Atoi(helpers.GetEnvVariable("GRACE_PERIOD_REQUESTS"))
+	allowedWorkers, _ := strconv.Atoi(helpers.GetEnvVariable("GRACE_PERIOD_WORKERS"))
 
 	log.Printf("Starting worker %d...\n", id)
 
 	for {
-		message := <-messageQueue
 
 		if totalRequests < gracePeriodRequests {
+			// if worker id is greater than the allowed workers then return
+			if id > allowedWorkers {
+				log.Printf("Worker %d is greater than the allowed workers (%d), returning...\n", id, allowedWorkers)
+				return
+			}
 			// Acquire a semaphore before accessing
 			if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
 				log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
@@ -69,6 +74,7 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 			log.Printf("Worker %d releasing semaphore\n", id)
 		}
 
+		message := <-messageQueue
 		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
 	}
 }
@@ -168,11 +174,20 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 	}
 
 	crossRefResponse := &parsing.TidyCrossRefResponse{}
-	// cross reference data using the DOI
+
+	// Cross reference data using the DOI
 	if tidyGrobidResponse.Doi != "" {
-		crossRefResponse, err = parsing.CrossReferenceData(tidyGrobidResponse.Doi)
+		crossRefResponse, err = parsing.CrossRefDataDOI(tidyGrobidResponse.Doi)
 		if err != nil {
-			log.Println("Error cross referencing data:", err)
+			log.Println("Error cross referencing data using DOI:", err)
+		}
+	}
+
+	// If DOI is not available or failed, try cross-referencing using Title
+	if crossRefResponse.DOI == "" && tidyGrobidResponse.Title != "" {
+		crossRefResponse, err = parsing.CrossRefDataTitle(tidyGrobidResponse.Title)
+		if err != nil {
+			log.Println("Error cross referencing data using Title:", err)
 		}
 	}
 
