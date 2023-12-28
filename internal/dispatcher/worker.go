@@ -43,17 +43,18 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 	log.Printf("Starting worker %d...\n", id)
 
 	for {
+		pass := true
 
 		if totalRequests < gracePeriodRequests {
 			// if worker id is greater than the allowed workers then return
 			if id > allowedWorkers {
 				log.Printf("Worker %d is greater than the allowed workers (%d), returning...\n", id, allowedWorkers)
-				return
+				pass = false
 			}
 			// Acquire a semaphore before accessing
 			if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
 				log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
-				return
+				pass = false
 			}
 			lastRequestTimeMu.Lock()
 			timeSinceLastRequest := time.Since(lastRequestTime)
@@ -74,8 +75,10 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 			log.Printf("Worker %d releasing semaphore\n", id)
 		}
 
-		message := <-messageQueue
-		processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
+		if pass {
+			message := <-messageQueue
+			processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
+		}
 	}
 }
 
