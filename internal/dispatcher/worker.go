@@ -272,7 +272,8 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
 		if err != nil {
 			logging.ErrorLogger.Println(err)
-			return
+			// skip this section
+			continue
 		}
 		order++
 	}
