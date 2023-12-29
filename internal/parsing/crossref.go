@@ -132,11 +132,23 @@ func CrossRefDataTitle(title string) (*TidyCrossRefResponse, error) {
 	// Extract data from the response
 	item := crossRefResponse.Message.Items[0]
 	tidyResponse := &TidyCrossRefResponse{
-		Title:    item.Title[0],
-		Year:     fmt.Sprintf("%d", item.Issued.DateParts[0][0]), // assuming the date-parts contain the year
-		Abstract: item.Abstract,
 		DOI:      item.DOI,
-		ISSN:     item.ISSN[0],
+		Abstract: item.Abstract,
+	}
+
+	// Check if Title array is not empty before accessing the first element
+	if len(item.Title) > 0 {
+		tidyResponse.Title = item.Title[0]
+	}
+
+	// Check if ISSN array is not empty before accessing the first element
+	if len(item.ISSN) > 0 {
+		tidyResponse.ISSN = item.ISSN[0]
+	}
+
+	// Check if Issued array is not empty and contains the expected date-parts before accessing the first element
+	if len(item.Issued.DateParts) > 0 && len(item.Issued.DateParts[0]) > 0 {
+		tidyResponse.Year = fmt.Sprintf("%d", item.Issued.DateParts[0][0])
 	}
 
 	return tidyResponse, nil
