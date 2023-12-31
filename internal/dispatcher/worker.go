@@ -48,7 +48,6 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 		if totalRequests < gracePeriodRequests {
 			// if worker id is greater than the allowed workers then return
 			if id > allowedWorkers {
-				//log.Printf("Worker %d is greater than the allowed workers (%d), returning...\n", id, allowedWorkers)
 				pass = false
 			}
 			if pass {
@@ -81,6 +80,7 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 			message := <-messageQueue
 			processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
 		}
+		time.Sleep(1 * time.Second)
 	}
 }
 
