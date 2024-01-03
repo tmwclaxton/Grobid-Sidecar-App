@@ -24,6 +24,7 @@ type Paper struct {
 	DOI       *string `json:"doi,omitempty"`
 	UserID    int64   `json:"user_id"`
 	ScreenID  int64   `json:"screen_id"`
+	PubMedID  *int    `json:"pubmed_id,omitempty"`
 	Title     string  `json:"title"`
 	Abstract  string  `json:"abstract"`
 	Journal   *string `json:"journal,omitempty"`
@@ -195,7 +196,8 @@ func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID int64, screenID int6
 	slug := helpers.GenerateRandomString(14)
 
 	// create paper
-	_, err := store.db.Exec("INSERT INTO papers (slug, user_id, screen_id, title, issn, abstract, year, doi, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", slug, userID, screenID, dto.Title, dto.ISSN, dto.Abstract, dto.Year, dto.DOI, carbon.Now().DateTimeString(), carbon.Now().DateTimeString())
+	_, err := store.db.Exec("INSERT INTO papers (slug, user_id, screen_id, pubmed_id, title, issn, abstract, year, doi, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		slug, userID, screenID, dto.PubMedID, dto.Title, dto.ISSN, dto.Abstract, dto.Year, dto.DOI, carbon.Now().DateTimeString(), carbon.Now().DateTimeString())
 	if err != nil {
 		return Paper{}, err
 	}

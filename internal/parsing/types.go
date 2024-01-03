@@ -18,6 +18,7 @@ type PDFDTO struct {
 	Journal   string       `json:"journal"`
 	Notes     string       `json:"notes"`
 	Date      string       `json:"date"`
+	PubMedID  any          `json:"pubmed_id"`
 }
 
 // create a PDFDTO

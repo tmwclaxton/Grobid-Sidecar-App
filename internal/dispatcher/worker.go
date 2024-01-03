@@ -225,12 +225,20 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 
 	// if paper does not exist, create it
 	if paper.ID == 0 {
+		// Get PubMed ID from DOI
+		pubMedID, err := parsing.GetPubMedIDFromDOI(pdfDTO.DOI)
+		if err != nil {
+			logging.ErrorLogger.Println(err)
+		} else {
+			pdfDTO.PubMedID = pubMedID
+		}
+
 		paper, err = s.CreatePaper(pdfDTO, userID, screenID)
 		if err != nil {
-			log.Println("Error creating paper:", err)
+			logging.ErrorLogger.Println(err)
 			return
 		} else {
-			log.Printf("Created paper: %v\n", paper.ID)
+			logging.InfoLogger.Printf("Created paper: %v\n", paper.ID)
 		}
 	} else {
 		log.Printf("Found paper: %v\n", paper.ID)
