@@ -116,6 +116,7 @@ func (store *Store) FindPaperByTitleAndAbstract(screenID int64, title string, ab
 			&paper.Journal,
 			&paper.Year,
 			&paper.Notes,
+			&paper.PubMedID,
 			&paper.CreatedAt,
 			&paper.UpdatedAt)
 		if err != nil {
@@ -149,7 +150,7 @@ func (store *Store) FindPaperByTitle(screenID int64, title string) (Paper, error
 
 	for rows.Next() {
 		var paper Paper
-		err = rows.Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.CreatedAt, &paper.UpdatedAt)
+		err = rows.Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.PubMedID, &paper.CreatedAt, &paper.UpdatedAt)
 		if err != nil {
 			return Paper{}, err
 		}
@@ -172,7 +173,7 @@ func (store *Store) FindPaperByTitle(screenID int64, title string) (Paper, error
 
 func (store *Store) FindPaperByDOI(id int64, doi string) (Paper, error) {
 	var paper Paper
-	err := store.db.QueryRow("SELECT * FROM papers WHERE screen_id = ? AND doi = ?", id, doi).Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.CreatedAt, &paper.UpdatedAt)
+	err := store.db.QueryRow("SELECT * FROM papers WHERE screen_id = ? AND doi = ?", id, doi).Scan(&paper.ID, &paper.Slug, &paper.CustomKey, &paper.ISSN, &paper.DOI, &paper.UserID, &paper.ScreenID, &paper.Title, &paper.Abstract, &paper.Journal, &paper.Year, &paper.Notes, &paper.PubMedID, &paper.CreatedAt, &paper.UpdatedAt)
 	if err != nil {
 		return Paper{}, err
 	}

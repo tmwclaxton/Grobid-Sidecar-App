@@ -47,6 +47,7 @@ func main() {
 	dbUser := helpers.GetEnvVariable("DB_USERNAME")
 	dbPassword := helpers.GetEnvVariable("DB_PASSWORD")
 	dbName := helpers.GetEnvVariable("DB_DATABASE")
+	cacheTableName := helpers.GetEnvVariable("DYNAMODB_CACHE_TABLE")
 	logging.InfoLogger.Println("Environment variables loaded successfully.")
 	// Set up mysql connection
 	logging.InfoLogger.Println("Database connection string: " + dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName)
@@ -82,11 +83,17 @@ func main() {
 	// Start dispatcher
 	go dispatcher.Dispatcher(sqsSvc, sqsURL, messageQueue)
 
+	// set up cache service
+	cacheSvc, err := helpers.NewCacheHelper(sess, cacheTableName)
+	if err != nil {
+		log.Fatal("Error creating cache service:", err)
+	}
+
 	workFunc := func() {
 		numWorkers, _ := strconv.Atoi(helpers.GetEnvVariable("WORKER_COUNT"))
 		// Start three workers
 		for i := 1; i <= numWorkers; i++ {
-			go dispatcher.Worker(i, messageQueue, sqsSvc, sqsURL, awsBucket, s)
+			go dispatcher.Worker(i, messageQueue, sqsSvc, sqsURL, awsBucket, s, cacheSvc)
 		}
 	}
 

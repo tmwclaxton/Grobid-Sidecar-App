@@ -31,7 +31,7 @@ var (
 	grobidSemaphore   = semaphore.NewWeighted(1)
 )
 
-func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string, s *store.Store) {
+func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket string, s *store.Store, cacheSvc *helpers.CacheHelper) {
 	awsRegion := helpers.GetEnvVariable("AWS_REGION")
 	minGapBetweenRequests, err := time.ParseDuration(helpers.GetEnvVariable("MINIMUM_GAP_BETWEEN_REQUESTS_SECONDS") + "s")
 	if err != nil {
@@ -77,8 +77,9 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 		}
 
 		if pass {
+
 			message := <-messageQueue
-			processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s)
+			processMessage(id, message, svc, sqsURL, s3Bucket, awsRegion, s, cacheSvc)
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -113,7 +114,7 @@ func downloadFileFromS3(s3Svc *s3.S3, bucket, path string) ([]byte, error) {
 	return fileContent, nil
 }
 
-func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, s *store.Store) {
+func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket, awsRegion string, s *store.Store, cacheSvc *helpers.CacheHelper) {
 	defer func() {
 		totalRequests++
 		log.Printf("Total requests: %d\n", totalRequests)
@@ -284,13 +285,30 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 		//log.Printf("Text: %s\n", section.Text)
 		_, err := s.CreateSection(paper.ID, section.Header, section.Text, order)
 		if err != nil {
-			logging.ErrorLogger.Println(err)
+			//logging.ErrorLogger.Println(err)
 			// skip this section
 			continue
 		}
 		order++
 	}
 	log.Printf("Sections iterated: %d\n", len(sections))
+
+	key := fmt.Sprintf("rapidresearch_cache_:screen:%d:papers_processing", screenID)
+	log.Printf("Key: %s\n", key)
+	// print current cache value
+	cacheValue, err := cacheSvc.GetCacheValue(key)
+	if err != nil {
+		logging.ErrorLogger.Println(err)
+		return
+	}
+	log.Printf("Current cache value: %s\n", cacheValue)
+
+	// decrement the cache with the screen id
+	err = cacheSvc.DecrOrDeleteCache(key)
+	if err != nil {
+		logging.ErrorLogger.Println(err)
+		return
+	}
 
 	if helpers.GetEnvVariable("REQUEUE_REQUESTS") == "true" {
 		_, err = svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
