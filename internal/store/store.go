@@ -57,6 +57,16 @@ type Screen struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// Log represents a log entry to be saved in the database
+type Log struct {
+	Level       string
+	UserMessage string
+	FullLog     string
+	Stage       string
+	UserID      int64
+	ScreenID    int64
+}
+
 // New creates a new Store instance
 func New(db *sql.DB) *Store {
 	return &Store{db: db}
@@ -193,6 +203,11 @@ func (store *Store) CreatePaper(dto *parsing.PDFDTO, userID int64, screenID int6
 		logging.WarningLogger.Println("Title or Abstract empty - UserID: " + strconv.FormatInt(userID, 10) + ", ScreenID: " + strconv.FormatInt(screenID, 10) + ", Title: " + dto.Title + ", Abstract: " + dto.Abstract)
 	}
 
+	// if title and doi are empty, return error
+	if dto.Title == "" && dto.DOI == "" {
+		return Paper{}, errors.New("CreatePaper: missing required fields: userID: " + strconv.FormatInt(userID, 10) + ", screenID: " + strconv.FormatInt(screenID, 10) + ", title: " + dto.Title + ", abstract: " + dto.Abstract)
+	}
+
 	// create slug
 	slug := helpers.GenerateRandomString(14)
 
@@ -270,4 +285,19 @@ func (store *Store) FindSectionByHeaderAndText(paperID int64, header string, tex
 
 	//log.Printf("Section found: %v\n", section.ID)
 	return section, nil
+}
+
+// SaveLog saves a log entry to the database
+func (store *Store) SaveLog(logEntry Log) error {
+	_, err := store.db.Exec(`
+		INSERT INTO logs (level, user_message, full_log, stage, user_id, screen_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+		logEntry.Level, logEntry.UserMessage, logEntry.FullLog, logEntry.Stage, logEntry.UserID, logEntry.ScreenID)
+
+	if err != nil {
+		log.Println("Error saving log entry:", err)
+		return err
+	}
+
+	return nil
 }
