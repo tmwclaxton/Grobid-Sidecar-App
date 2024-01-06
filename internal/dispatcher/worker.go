@@ -120,7 +120,7 @@ func handleFail(s *store.Store, cacheSvc *helpers.CacheHelper, message *sqs.Mess
 
 			UserMessage: fmt.Sprintf("Error processing file: %s", s3Location),
 			FullLog:     err.Error(),
-			Stage:       "paper_processing",
+			Stage:       "pdf_processing",
 			UserID:      userID,
 			ScreenID:    screenID,
 		}
@@ -319,8 +319,20 @@ func processMessage(id int, message *sqs.Message, svc *sqs.SQS, sqsURL, s3Bucket
 			logging.InfoLogger.Printf("Created paper: %v\n", paper.ID)
 		}
 	} else {
-		log.Printf("Found paper: %v\n", paper.ID)
 		paperAlreadyExists = true
+		log.Printf("Found paper: %v\n", paper.ID)
+		logEntry := store.Log{
+			Level:       "info",
+			UserMessage: fmt.Sprintf("Ignore if you uploaded a csv first.  Paper has already been added: %v", paper.Title),
+			FullLog:     "",
+			Stage:       "pdf_processing",
+			UserID:      userID,
+			ScreenID:    screenID,
+		}
+		err := s.SaveLog(logEntry)
+		if err != nil {
+			return err
+		}
 	}
 
 	// ---- Sections ----
