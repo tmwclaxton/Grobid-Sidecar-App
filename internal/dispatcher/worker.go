@@ -45,37 +45,34 @@ func Worker(id int, messageQueue <-chan *sqs.Message, svc *sqs.SQS, sqsURL, s3Bu
 	for {
 		pass := true
 
-		if totalRequests > gracePeriodRequests {
-			// stop killing grobid >:|
-			minGapBetweenRequests = 1 * time.Second
-		}
-		// if worker id is greater than the allowed workers then return
-		if id > allowedWorkers {
-			pass = false
-		}
-		if pass {
-			// Acquire a semaphore before accessing
-			if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
-				log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
+		if totalRequests < gracePeriodRequests {
+			// if worker id is greater than the allowed workers then return
+			if id > allowedWorkers {
 				pass = false
 			}
-			lastRequestTimeMu.Lock()
-			timeSinceLastRequest := time.Since(lastRequestTime)
-			lastRequestTimeMu.Unlock()
-			//log.Printf("Worker %d acquired semaphore\n", id)
+			if pass {
+				// Acquire a semaphore before accessing
+				if err := grobidSemaphore.Acquire(context.Background(), 1); err != nil {
+					log.Printf("Worker %d could not acquire semaphore: %v\n", id, err)
+					pass = false
+				}
+				lastRequestTimeMu.Lock()
+				timeSinceLastRequest := time.Since(lastRequestTime)
+				lastRequestTimeMu.Unlock()
+				//log.Printf("Worker %d acquired semaphore\n", id)
 
-			// If the time since the last request is less than the minimum gap between requests, sleep for the difference
-			if timeSinceLastRequest < minGapBetweenRequests {
-				sleepTime := minGapBetweenRequests - timeSinceLastRequest
-				//log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
-				time.Sleep(sleepTime)
+				// If the time since the last request is less than the minimum gap between requests, sleep for the difference
+				if timeSinceLastRequest < minGapBetweenRequests {
+					sleepTime := minGapBetweenRequests - timeSinceLastRequest
+					//log.Printf("Worker %d sleeping for %v to meet the minimum gap between requests\n", id, sleepTime)
+					time.Sleep(sleepTime)
+				}
+				lastRequestTimeMu.Lock()
+				lastRequestTime = time.Now()
+				lastRequestTimeMu.Unlock()
+				grobidSemaphore.Release(1) // Release the semaphore when the function exits
+				//log.Printf("Worker %d releasing semaphore\n", id)
 			}
-			lastRequestTimeMu.Lock()
-			lastRequestTime = time.Now()
-			lastRequestTimeMu.Unlock()
-			grobidSemaphore.Release(1) // Release the semaphore when the function exits
-
-			//log.Printf("Worker %d releasing semaphore\n", id)
 		}
 
 		if pass {
