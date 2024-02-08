@@ -75,12 +75,23 @@ func CrossRefDataDOI(doi string) (*TidyCrossRefResponse, error) {
 
 	// Extract data from the response
 	item := crossRefResponse.Message
+	title := ""
+	// check if title > 0
+	if len(item.Title) > 0 {
+		title = item.Title[0]
+	}
+	issn := ""
+	// check if title > 0
+	if len(item.ISSN) > 0 {
+		issn = item.ISSN[0]
+	}
+
 	tidyCrossRefResponse := &TidyCrossRefResponse{
-		Title:    item.Title[0],
+		Title:    title,
 		Year:     fmt.Sprintf("%d", item.Issued.DateParts[0][0]), // assuming the date-parts contain the year
 		Abstract: item.Abstract,
 		DOI:      item.DOI,
-		ISSN:     item.ISSN[0],
+		ISSN:     issn,
 	}
 
 	if tidyCrossRefResponse.Abstract != "" {
